@@ -221,3 +221,11 @@ aside{display:grid;grid-template-columns:1.6fr 1fr;margin-top:16px;align-items:s
 .nextRound:after{content:"→";font-size:20px;line-height:1}
 #dialogBody>.nextRound{width:100%;margin:4px 0 16px}
 #piano[hidden],.finishPanel[hidden]{display:none}
+
+.signCue{display:flex;align-items:center;gap:12px;padding:8px 14px;background:#26352e;color:#f4f4dc;border-top:1px solid #52634e;font-size:14px;line-height:1.35}
+.signCue[hidden]{display:none}
+.signCue strong{flex:none;color:#ffe496;font-size:16px}
+.signNotes{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0}
+.signCard{background:#e8efdf;color:#27382d;border-radius:8px;padding:5px}
+.signCard .guideStaff{height:auto}
+#signExamples button{min-height:42px}
