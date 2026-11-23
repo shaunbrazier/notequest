@@ -70,7 +70,7 @@ class BarStrikeDetector {
 
 const instrumentMic={
  session:null, ignoreUntil:0,
- message(text){document.getElementById('micStatus').textContent=text},
+ message(text){document.getElementById('micStatus').textContent=instrumentWords(text)},
  paint(){
   const s=this.session;
   const button=document.getElementById('micButton');
@@ -93,7 +93,11 @@ const instrumentMic={
   const s=this.session;
   if(!s?.stream)return;
   s.reference=Math.min(108,12*(octave+1));
-  s.phase='calibrate';s.detector=new BarStrikeDetector();
+  s.phase='calibrate';
+  if(s.detector){
+   // A ringing note from the old instrument must not become the new reference.
+   s.detector.attack=-1;s.detector.armed=false;
+  }else s.detector=new BarStrikeDetector();
   this.paint();
   const name=lessonName(readNote('C'+(s.reference/12-1)));
   this.message('Strike the C bar you use for '+name+'. This sets the pitch for your instrument.');

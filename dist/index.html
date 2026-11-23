@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="en">
-<head><meta charset="utf-8"><meta name="robots" content="noindex, nofollow, noimageindex"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#101722"><title>NoteQuest · Sight-reading adventure</title><link rel="stylesheet" href="style.css?v=listen-bars"><script src="listening.js?v=listen-bars" defer></script><script src="game.js?v=listen-bars" defer></script></head>
+<head><meta charset="utf-8"><meta name="robots" content="noindex, nofollow, noimageindex"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#101722"><title>NoteQuest · Sight-reading adventure</title><link rel="stylesheet" href="style.css?v=clef-switch"><script src="listening.js?v=clef-switch" defer></script><script src="game.js?v=clef-switch" defer></script></head>
 <body>
 <header class="topbar"><div class="navwrap">
 <a class="brand" href="#adventure" aria-label="NoteQuest adventure"><span class="brandmark" data-icon="music"></span>Note<span>Quest</span></a>
@@ -11,10 +11,10 @@
 <div class="layout">
 <section id="game" class="panel game" aria-label="Note practice">
 <header class="consoleHead"><div><div class="location"><i data-icon="flag"></i><span id="worldBadge"></span><span aria-hidden="true"> / </span><span id="worldTitle"></span></div><h1 id="roundTitle">The Bellflower Song</h1></div><span id="counter" class="counter">Note 1 of 8</span></header>
-<div class="instrumentInput" id="instrumentInput"><div><strong>Play your glockenspiel</strong><span id="micStatus" role="status">Tap the bars, or let the iPad listen to yours.</span></div><div class="inputActions"><button id="micCalibrate" hidden>Match C again</button><button id="micButton" aria-pressed="false">Use microphone</button></div></div>
+<div class="instrumentInput" id="instrumentInput"><div><div class="instrumentChooser" role="group" aria-label="Choose your instrument"><button type="button" id="chooseGlock" aria-pressed="true">Glockenspiel</button><button type="button" id="choosePiano" aria-pressed="false">Piano</button></div><span id="micStatus" role="status">Tap the bars, or let the iPad listen to yours.</span></div><div class="inputActions"><button id="micCalibrate" hidden>Match C again</button><button id="micButton" aria-pressed="false">Use microphone</button></div></div>
 <div id="landscape" class="playSurface" aria-label="Playable music world">
 <div class="scenery">
-<div class="scoreControls"><span class="clefLabel" id="clefLabel">Treble clef</span><button id="listen" class="listen"><i data-icon="volume"></i>Hear note</button></div>
+<div class="scoreControls"><button class="clefLabel" id="clefLabel" title="Compare treble and bass clefs">Treble clef</button><button id="listen" class="listen"><i data-icon="volume"></i>Hear note</button></div>
 <div class="scoreCloud"><div id="score" role="img" aria-label="Read the displayed note"></div></div>
 <div id="worldStage" class="worldStage"><div class="sceneFloor"><div id="instruments"></div><div id="traveller"><canvas id="journeyFox" width="24" height="24" aria-hidden="true"></canvas></div></div>
 <span id="sceneAction" class="visuallyHidden"></span><span id="songCount" class="visuallyHidden"></span></div>
