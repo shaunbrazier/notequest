@@ -152,9 +152,11 @@ function parseSequence(input){
   return chord;
  });
 }
-const defaults={xp:0,best:0,unlocked:0,world:0,sound:true,history:{},seen:{},songs:{},dashBest:{},dashLearned:{},instrument:'glockenspiel',finished:false};
+const defaults={xp:0,best:0,unlocked:0,world:0,sound:true,history:{},seen:{},songs:{},dashBest:{},dashLearned:{},instrument:'piano',finished:false};
 let saved;
 try{saved=Object.assign({},defaults,JSON.parse(localStorage.getItem('notequest-v1'))||{})}catch{saved={...defaults}}
+// Earlier saves persisted the old default even when the player never chose it.
+if(!saved.pianoDefault){saved.instrument='piano';saved.pianoDefault=true}
 if(!['glockenspiel','piano','xylophone'].includes(saved.instrument))saved.instrument=defaults.instrument;
 saved.world=Math.min(Math.max(0,Number(saved.world)||0),worlds.length-1);
 // Keep independently read pitches available for the bonus game after later mistakes.
@@ -163,29 +165,71 @@ for(const [key,independent] of Object.entries(saved.history)){
 }
 function save(){try{localStorage.setItem('notequest-v1',JSON.stringify(saved))}catch{}}
 let round, audio, octave, streak=0, pending=0, renderToken=0, midiAccess, teacherText='C4 D4 E4 G4 E4 D4 C4',teacherClef='treble',teacherLabels=false;
-const instruments={
- piano:{partials:[[1,.19],[2,.055],[3,.025]],decay:.75},
- glockenspiel:{partials:[[1,.19],[2.76,.035],[5.4,.019]],decay:1.1},
- xylophone:{partials:[[1,.21],[3,.075],[6.1,.024]],decay:.38}
+const voices={
+ piano:{partials:[[1,.53],[2,.19],[3,.085],[4,.035]],decay:.88},
+ glockenspiel:{partials:[[1,.58],[2.76,.13],[5.4,.07]],decay:1.15}
 };
+let instrumentOutput;
+const malletBuffers=new Map();
+const recordedPitches=Object.keys(xylophoneSamples).map(Number);
+function playXylophone(pitch,time){
+ const nearest=recordedPitches.reduce((best,n)=>Math.abs(n-pitch)<Math.abs(best-pitch)?n:best);
+ if(!malletBuffers.has(nearest)){
+  const pcm=atob(xylophoneSamples[nearest]);
+  const buffer=audio.createBuffer(1,pcm.length/2,22050),samples=buffer.getChannelData(0);
+  for(let i=0;i<samples.length;i++){
+   const value=pcm.charCodeAt(i*2)|(pcm.charCodeAt(i*2+1)<<8);
+   samples[i]=(value>=32768?value-65536:value)/32768;
+  }
+  malletBuffers.set(nearest,buffer);
+ }
+ const strike=audio.createBufferSource(),level=audio.createGain();
+ strike.buffer=malletBuffers.get(nearest);
+ const rate=2**((pitch-nearest)/12),duration=Math.min(1.2,strike.buffer.duration/rate);
+ strike.playbackRate.value=rate;
+ level.gain.setValueAtTime(2.8,time);
+ level.gain.setValueAtTime(2.8,time+duration*.85);
+ level.gain.linearRampToValueAtTime(0,time+duration);
+ strike.connect(level).connect(instrumentOutput);
+ strike.start(time);strike.stop(time+duration);
+ instrumentMic.blockSpeaker(duration);
+}
 function playTone(midi){
- const {partials,decay}=instruments[saved.instrument];
  if(!saved.sound)return;
- instrumentMic.blockSpeaker(decay);
  try{
-  audio??=new (window.AudioContext||window.webkitAudioContext)();if(audio.state==='suspended')audio.resume().catch(()=>{});
-  const writtenOffset=instrumentMic.session?.phase==='play'?instrumentMic.session.offset:0;
-  const time=audio.currentTime,frequency=440*2**((midi-writtenOffset-69)/12);
-  partials.forEach(([harmonic,volume])=>{
-   const osc=audio.createOscillator(),gain=audio.createGain();osc.frequency.value=frequency*harmonic;
-   gain.gain.setValueAtTime(.0001,time);gain.gain.exponentialRampToValueAtTime(volume,time+.009);gain.gain.exponentialRampToValueAtTime(.0001,time+decay/Math.sqrt(harmonic));
-   osc.connect(gain).connect(audio.destination);osc.start(time);osc.stop(time+decay+.05);
-  });
+  audio??=new (window.AudioContext||window.webkitAudioContext)();
+  if(audio.state!=='running')audio.resume().catch(()=>{});
+  if(!instrumentOutput){
+   // Leave a single strike at full level and tame overlapping notes and chords.
+   instrumentOutput=audio.createDynamicsCompressor();
+   instrumentOutput.threshold.value=-6;instrumentOutput.knee.value=3;
+   instrumentOutput.ratio.value=16;instrumentOutput.attack.value=.002;instrumentOutput.release.value=.09;
+   const headroom=audio.createGain();headroom.gain.value=.74;
+   instrumentOutput.connect(headroom).connect(audio.destination);
+  }
+  const offset=instrumentMic.session?.phase==='play'?instrumentMic.session.offset:0;
+  const pitch=midi-offset,time=audio.currentTime;
+  if(saved.instrument==='xylophone'){playXylophone(pitch,time);return}
+  const {partials,decay}=voices[saved.instrument];
+  instrumentMic.blockSpeaker(decay);
+  const frequency=440*2**((pitch-69)/12);
+  for(const [harmonic,volume] of partials){
+   if(frequency*harmonic>=audio.sampleRate/2)continue;
+   const osc=audio.createOscillator(),gain=audio.createGain();
+   const end=time+decay/Math.sqrt(harmonic);
+   osc.frequency.value=frequency*harmonic;
+   gain.gain.setValueAtTime(0,time);
+   gain.gain.linearRampToValueAtTime(volume,time+.005);
+   gain.gain.exponentialRampToValueAtTime(volume*.33,time+(end-time)*.25);
+   gain.gain.exponentialRampToValueAtTime(.0001,end);
+   osc.connect(gain).connect(instrumentOutput);osc.start(time);osc.stop(end);
+  }
  }catch{}
 }
 function shuffle(items){const a=[...items];for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
 function newRound(teacher,seq,clef){
  clearTimeout(pending);stopDash();stopReplay();renderToken++;streak=0;
+ $('finishPanel').hidden=true;$('piano').hidden=false;
  round={teacher,seq,clef,score:seq.slice(),index:0,correct:0,assisted:false,pressed:new Set(),mistakes:[],locked:false,done:false,results:[]};
  octave=teacher?Math.max(0,Math.min(7,seq[0][0].oct)):readNote(worlds[saved.world].notes.split(' ')[0]).oct;feedback('');$('dialog').close();draw();
 }
@@ -469,6 +513,15 @@ function finishNote(independent){
 function show(title,html){$('dialogTitle').textContent=title;$('dialogBody').innerHTML=html;paintIcons($('dialogBody'));if(!$('dialog').open)$('dialog').showModal()}
 function action(label,fn,cls='primary'){const b=document.createElement('button');b.textContent=label;b.className=cls;b.onclick=fn;return b}
 function actions(...buttons){const row=document.createElement('div');row.className='modalActions';row.append(...buttons);$('dialogBody').append(row)}
+function nextRound(){
+ if(round.teacher){newRound(true,round.score.slice(),round.clef);return}
+ practice(round.nextWorld);
+}
+$('continueRound').onclick=nextRound;
+function firstResultAction(label,fn){
+ const button=action(label,fn,'primary nextRound');
+ $('dialogBody').prepend(button);$('dialog').scrollTop=0;button.focus({preventScroll:true});
+}
 function complete(){
  stopReplay();const firstFinish=!round.done;round.done=true;staff();progress();keyboard();
  if(firstFinish&&!round.teacher){saved.songs[saved.world]=(saved.songs[saved.world]||0)+1;save();updateDashEntry()}
@@ -477,10 +530,17 @@ function complete(){
  if(cleared){saved.unlocked=Math.max(saved.unlocked,Math.min(world+1,worlds.length-1));if(world===worlds.length-1)saved.finished=true;save()}
  const missed=[...new Set(round.results.filter(x=>!x.independent&&!x.lesson).map(x=>x.names))];
  show(round.teacher?'Challenge complete!':'Tune complete!',(!round.teacher?'<p>You reached the final bar. Listen back to the tune you just played.</p>':'')+'<div class="resultNumber">'+(total?counts:'Lesson cleared')+'</div><p>'+(total?'Read correctly on the first try without help.':'You’ve met the notes. Try them from memory next round.')+'</p>'+(missed.length?'<p>Practise next: <b>'+missed.join(', ')+'</b>.</p>':total?'<p>Every practice pitch played independently!</p>':'')+(!round.teacher?'<p>'+(cleared?(world===worlds.length-1?'You’ve cleared every world!':'You can now explore '+worlds[world+1].name+'.'):'Read every pitch independently and score at least 80% in a round to clear this world.')+'</p>':''));
- if(round.teacher)actions(action('New teacher test',teacherSetup),action('Back to adventure',()=>practice(),'secondary'));
- else actions(action('Replay your tune',replaySong,'secondary'),action(cleared&&world<worlds.length-1?'Next world':'Play another round',()=>practice(cleared?Math.min(world+1,worlds.length-1):world)),action('World map',map,'secondary'));
+ round.nextWorld=cleared?Math.min(world+1,worlds.length-1):world;
+ const label=round.teacher?'Play this test again':round.nextWorld!==world?'Continue to '+worlds[round.nextWorld].name:'Play next round';
+ $('finishTitle').textContent=round.teacher?'Test complete!':'Tune complete!';
+ $('continueRound').textContent=label;
+ $('piano').hidden=true;$('octaveControls').hidden=true;$('finishPanel').hidden=false;
+ $('hint').hidden=true;$('listen').hidden=true;
+ firstResultAction(label,nextRound);
+ if(round.teacher)actions(action('New teacher test',teacherSetup,'secondary'),action('Back to adventure',()=>practice(),'secondary'));
+ else actions(action('Replay your tune',replaySong,'secondary'),action('World map',map,'secondary'));
  if(!round.teacher&&dashPool().length>=2)actions(action('Play Firefly Dash',openDash,'dashLaunch'));
- feedback('Round complete.');$('feedback').append(' ',action('See results',complete,'hint'));
+ feedback('');$('prompt').textContent='';$('feedback').append(action('See results',complete,'hint'));
 }
 function map(){
  show('World map','<p>Choose an open world and play your way along its stave.</p>');
@@ -507,8 +567,8 @@ function help(){
 }
 $('help').onclick=help;$('close').onclick=()=>$('dialog').close();
 $('octDown').onclick=()=>{if(octave>0){octave--;keyboard()}};$('octUp').onclick=()=>{if(octave<7){octave++;keyboard()}};
-document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{if(b.dataset.view==='map')map();else if(b.dataset.view==='teacher')teacherSetup();else if(round.teacher||round.done)practice();else $('game').scrollIntoView({block:'nearest'})});
-document.querySelector('.brand').onclick=e=>{e.preventDefault();if(round.teacher||round.done)practice();else window.scrollTo(0,0)};
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{if(b.dataset.view==='map')map();else if(b.dataset.view==='teacher')teacherSetup();else if(round.teacher)practice();else if(round.done)nextRound();else $('game').scrollIntoView({block:'nearest'})});
+document.querySelector('.brand').onclick=e=>{e.preventDefault();if(round.teacher)practice();else if(round.done)nextRound();else window.scrollTo(0,0)};
 let dash=null;
 const dashLength=10;
 function dashPool(){
@@ -634,10 +694,11 @@ function finishDash(){
  const {world,caught}=dash;
  saved.dashBest[world]=Math.max(saved.dashBest[world]||0,caught);save();stopDash();
  show('Fireflies home!','<div class="dashIntro"><span aria-hidden="true">✦</span><p>All ten made it back to '+worlds[world].name+'.</p></div><div class="resultNumber">'+caught+' / '+dashLength+'</div><p>Fireflies caught before they landed. Your best in this world is '+saved.dashBest[world]+'.</p>');
- actions(action('Another dash',openDash),action('Back to adventure',()=>{if(round.done)complete();else $('dialog').close()},'secondary'));
+ firstResultAction(round.done?$('continueRound').textContent:'Continue adventure',()=>{if(round.done)nextRound();else $('dialog').close()});
+ actions(action('Another dash',openDash,'secondary'));
 }
 $('openDash').onclick=openDash;
-$('dialog').addEventListener('close',()=>{if(!$('dialog').open)stopDash()});
+$('dialog').addEventListener('close',()=>{if(!$('dialog').open){stopDash();if(round.done&&!replayTimer)$('continueRound').focus({preventScroll:true})}});
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&dash?.phase==='flying')toggleDashPause()});
 
 styleInstrument();

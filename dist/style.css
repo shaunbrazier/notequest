@@ -214,3 +214,10 @@ aside{display:grid;grid-template-columns:1.6fr 1fr;margin-top:16px;align-items:s
  .playSurface:not([data-world=teacher]) .scenery{padding-top:16px}
  .scoreCloud .trailStaff{height:111px}
 }
+
+.finishPanel{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:16px;padding:20px 12px;background:#23392f;border-block:1px solid #547156}
+.finishPanel strong{font:30px/1 var(--display);color:#f4f8df}
+.nextRound{display:flex;align-items:center;justify-content:center;gap:12px;border-radius:6px;min-height:48px;padding:10px 18px;font-weight:750}
+.nextRound:after{content:"→";font-size:20px;line-height:1}
+#dialogBody>.nextRound{width:100%;margin:4px 0 16px}
+#piano[hidden],.finishPanel[hidden]{display:none}
