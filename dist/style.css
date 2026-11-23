@@ -68,3 +68,52 @@ dialog{color:var(--ink);background:var(--panel);border:1px solid #526172;border-
   .piano{height:100px}
   aside{margin-top:12px}
 }
+
+/* The live scene shares its instruments and pitch order with the song. */
+.hero[data-world]{display:grid;grid-template-columns:42% minmax(0,1fr);align-items:stretch;min-height:226px;background-position:center 61%;background-size:cover}
+.hero[data-world=meadow]{background-image:url(assets/meadow-scene.webp)}
+.hero[data-world=woods]{background-image:url(assets/woods-scene.webp)}
+.hero[data-world=tower]{background-image:url(assets/tower-scene.webp)}
+.hero[data-world=brook]{background-image:url(assets/brook-scene.webp)}
+.hero[data-world=cavern]{background-image:url(assets/cavern-scene.webp)}
+.hero[data-world=castle]{background-image:url(assets/castle-scene.webp)}
+.hero[data-world]:before{background:linear-gradient(90deg,#102125ef 0%,#102125cb 34%,#10212516 64%,#10212505)}
+.heroText{align-self:center}.hero h1{font-size:clamp(40px,4.8vw,65px)}.heroText p{max-width:38ch;text-wrap:pretty}
+.worldStage{position:relative;align-self:stretch;min-width:0;margin:10px 20px 8px 0}
+.sceneFloor{position:absolute;inset:auto 2% 30px;height:100px;isolation:isolate}
+#instruments{position:absolute;inset:auto 0 20px;display:flex;justify-content:space-around;align-items:end}
+.instrument{width:min(12%,58px);min-width:0;flex:0 1 auto;height:auto;image-rendering:pixelated;transform:translateY(calc(-1 * var(--lift)));filter:drop-shadow(1px 2px 1px #112a2ebf)}
+.instrument.lit{filter:drop-shadow(0 0 4px #fff08a88) drop-shadow(1px 3px 0 #1e2b2e88)}
+#traveller{position:absolute;width:42px;bottom:0;transform:translateX(-50%);transition:left .38s ease;filter:drop-shadow(1px 2px 0 #302d36)}
+#traveller canvas{display:block;width:100%;image-rendering:pixelated}
+.sceneCaption{position:absolute;bottom:0;left:0;right:0;display:flex;justify-content:space-between;align-items:center;gap:4px;background:#101b21de;color:#f4f5df;border:1px solid #ffffff40;border-radius:5px;padding:4px 9px;font-size:13px;font-weight:650}
+#songCount{white-space:nowrap;color:#c6f4a3}.restored .sceneCaption{border-color:#b0e082;color:#d7f7b4}
+.instrument.responding{animation:bloom .6s ease-out;transform-origin:bottom center}
+[data-world=tower] .responding,[data-world=woods] .responding{animation-name:ring;transform-origin:50% 5%}
+[data-world=brook] .responding{animation-name:rise}
+[data-world=castle] .responding{animation-name:turnPin;transform-origin:center}
+@keyframes bloom{0%{scale:.68}50%{scale:1.18}100%{scale:1}}
+@keyframes ring{20%{rotate:-19deg}50%{rotate:14deg}80%{rotate:-6deg}}
+@keyframes rise{0%{translate:0 13px;opacity:.6}55%{translate:0 -5px}}
+@keyframes turnPin{0%{rotate:-35deg;scale:.8}65%{rotate:8deg;scale:1.12}}
+.fieldGuide{display:flex;align-items:center;gap:6px;font-weight:650;padding:3px 0}.guideTabs,.memoryWords{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0}
+.guideOption{border:1px solid var(--border);border-radius:6px;background:#232f3c;padding:6px 12px;min-height:40px}
+.guideOption[aria-pressed=true]{border-color:#9fcf83;color:var(--green);background:#2d4032}
+.guideStaff{display:block;background:#f0f4e8;color:#29382d;fill:currentColor;width:100%;height:122px;border-radius:8px}
+dialog .memoryTitle{font:32px/1 var(--display);color:var(--gold)}
+@media(max-width:700px){
+ .hero[data-world]{grid-template-columns:1fr;min-height:0;background-position:center 59%}
+ .hero[data-world]:before{background:linear-gradient(105deg,#11231cdb,#11231c77 56%,#11231c00)}
+ .heroText{padding:10px 14px 0}.heroText h1{font-size:38px}.heroText p{font-size:14px;max-width:42ch}
+ .worldStage{height:98px;margin:0 10px 5px}.sceneFloor{height:66px;bottom:22px}.instrument{max-width:39px}
+ #traveller{width:29px}.sceneCaption{font-size:12px;padding:2px 7px}#instruments{bottom:11px}
+ .guideOption{min-height:44px}.keysHeader h3{flex-shrink:0}
+}
+@media(orientation:landscape) and (max-height:530px){
+ .hero[data-world]{display:grid;grid-template-columns:43% 1fr;min-height:95px}
+ .heroText{padding:6px 10px}.heroText h1{font-size:26px;margin:1px 0}.worldchip{font-size:10px;padding:2px 6px}
+ .heroText p{font-size:12px}.worldStage{min-height:88px;height:auto;margin:2px 10px 3px 0}
+ .sceneFloor{height:59px;bottom:21px}.instrument{max-width:37px}#traveller{width:28px}#instruments{bottom:9px}
+ .hero[data-world=teacher]{display:none}
+}
+@media(prefers-reduced-motion:reduce){.instrument.responding{animation:none}#traveller{transition:none}}
