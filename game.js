@@ -88,7 +88,7 @@ function openGuide(){
 $('fieldGuide').onclick=openGuide;
 
 // Each instrument has its own resting shape and response to repeated pitches.
-function drawInstrument(canvas,kind,hits){
+function drawInstrument(canvas,kind,hits,voice){
  const g=canvas.getContext('2d'),on=hits>0;
  const rect=(x,y,w,h,c)=>{g.fillStyle=c;g.fillRect(x,y,w,h)};
  const poly=(points,c)=>{g.fillStyle=c;g.beginPath();points.forEach(([x,y],i)=>i?g.lineTo(x,y):g.moveTo(x,y));g.closePath();g.fill()};
@@ -97,8 +97,14 @@ function drawInstrument(canvas,kind,hits){
  if(kind==='meadow'){
   const y=on?Math.max(7,17-hits*3):22;
   rect(14,y+4,3,34-y,'#47763e');poly([[15,31],[5,24],[10,23],[16,27]],'#83ba52');poly([[16,26],[23,19],[27,19],[22,25]],'#9dce61');
-  if(on){for(const [x,dy] of [[8,0],[16,-4],[20,3],[12,7],[6,5]])rect(x,y+dy,8,7,'#ff97a6');rect(12,y+2,8,6,'#ffdd80')}
-  else{poly([[10,23],[12,17],[19,15],[22,20],[17,24]],'#9caf70');rect(12,20,5,3,'#bdce80')}
+  if(on){for(const [x,dy] of [[8,0],[16,-4],[20,3],[12,7],[6,5]])rect(x,y+dy,8,7,['#ff96a9','#ffcb6b','#adadff'][voice%3]);rect(12,y+2,8,6,'#ffdd80')}
+  else{
+   poly([[8,21],[11,15],[17,11],[22,16],[22,21],[18,25],[12,25]],'#385139');
+   poly([[10,20],[13,15],[17,13],[20,16],[20,21],[17,23],[13,23]],['#e88fa7','#e1ac55','#ac93d8'][voice%3]);
+   rect(13,16,3,5,'#ffe1bc');rect(12,23,7,2,'#8cac5f');
+  }
+  if(hits>=2){rect(6,25,3,8,'#48733e');rect(3,22,9,5,'#fff1b5');rect(5,20,5,9,'#ffdd85');rect(6,23,3,3,'#be7939')}
+  if(hits>=3){rect(23,24,2,9,'#47763e');rect(20,21,8,5,'#ffd3d8');rect(22,19,4,9,'#ffc0d0');rect(22,22,3,3,'#ffdd80')}
  }else if(kind==='woods'){
   rect(15,1,2,8,'#786e58');rect(9,8,14,3,gold);poly([[9,11],[23,11],[25,25],[20,31],[12,31],[7,25]],on?'#e5ab48':'#506457');
   rect(11,14,10,12,on?'#fff59c':'#6e8370');rect(10,29,12,3,gold);rect(14,32,4,2,gold);
@@ -124,39 +130,80 @@ function drawInstrument(canvas,kind,hits){
 let replayTimer=0;
 function stopReplay(){clearTimeout(replayTimer);replayTimer=0}
 function worldEcho(midi){playTone(midi,quests[saved.world].voices,.09, .95)}
+// The playable octave spans eight white keys. Accidentals sit on their shared edges.
+function keyPosition(pitch){
+ const relative=pitch-12*(octave+1);
+ if(relative===12)return 93.75;
+ const natural=semitones.indexOf(relative);
+ const slot=natural>=0?natural+.5:semitones.indexOf(relative-1)+1;
+ return slot*100/8;
+}
+const worldActions=['open a bellflower','light a woodland lantern','ring a tower bell','raise a stepping stone','grow a crystal','turn the next lock'];
+function lightConnection(pitch,target){
+ const surface=$('landscape'),layer=$('keyLight'),key=$('piano').querySelector('[data-pitch="'+pitch+'"]');
+ if(!key||!target)return;
+ const box=surface.getBoundingClientRect(),k=key.getBoundingClientRect(),t=target.getBoundingClientRect();
+ const x=k.left+k.width/2-box.left,y=k.top+k.height*.24-box.top;
+ const tx=t.left+t.width/2-box.left,ty=t.top+t.height*.48-box.top;
+ const curve='M'+x+' '+y+' Q'+x+' '+(ty+22)+' '+tx+' '+ty;
+ layer.setAttribute('viewBox','0 0 '+box.width+' '+box.height);
+ // Even with motion disabled, the pressed key, stave note and destination light together.
+ const trail='<path d="'+curve+'" stroke="#63482b" stroke-width="8"/><path d="'+curve+'" stroke="#ffe595" stroke-width="4"/>';
+ let flight='';
+ if(!window.matchMedia('(prefers-reduced-motion: reduce)').matches){
+  const head=$('score').querySelector('.writtenPitch');
+  if(head){
+   const h=head.getBoundingClientRect(),sx=h.left+h.width/2-box.left,sy=h.top+h.height/2-box.top;
+   const drop='M'+sx+' '+sy+' Q'+sx+' '+(ty+12)+' '+tx+' '+ty;
+   flight='<g><ellipse rx="7" ry="5" transform="rotate(-16)" fill="#ffe48b" stroke="#35412c" stroke-width="2"/><path d="M6 0v-20" stroke="#35412c" stroke-width="2.5"/><animateMotion dur=".36s" path="'+drop+'" fill="freeze"/><animate attributeName="opacity" values="1;1;0" keyTimes="0;.65;1" dur=".55s" fill="freeze"/></g>';
+  }
+  flight+='<circle r="5" fill="#fff9cd"><animateMotion dur=".29s" path="'+curve+'" fill="freeze"/></circle>';
+ }
+ layer.innerHTML=trail+'<circle cx="'+tx+'" cy="'+ty+'" r="11" stroke="#fff4a9" stroke-width="2"/>'+flight;
+ $('score').classList.add('noteAccepted');
+ $('piano').querySelectorAll('.keyResonating').forEach(el=>el.classList.remove('keyResonating'));
+ key.classList.add('keyResonating');
+}
 function renderScene(animate=false,playedOverride){
- const hero=$('landscape'),stage=$('worldStage');
- stage.hidden=round.teacher;hero.dataset.world=round.teacher?'teacher':quests[saved.world].kind;
+ const hero=$('landscape'),stage=$('worldStage'),q=quests[saved.world];
+ stage.hidden=round.teacher;hero.dataset.world=round.teacher?'teacher':q.kind;
+ $('keyLight').replaceChildren();$('score').classList.remove('noteAccepted');
+ $('piano').querySelectorAll('.keyResonating').forEach(el=>el.classList.remove('keyResonating'));
  if(round.teacher)return;
- const q=quests[saved.world],score=round.score;
- const steps=playedOverride??round.results.filter(r=>!r.review).length;
+ const score=round.score,steps=playedOverride??round.results.filter(r=>!r.review).length;
  const melody=score.slice(0,steps).map(chord=>chord[0].midi),last=melody.at(-1);
  const path=q.kind==='brook'||q.kind==='castle';
  const notes=path?score.map(chord=>chord[0].midi):[...new Set(score.map(chord=>chord[0].midi))].sort((a,b)=>a-b);
  const active=path?steps-1:notes.indexOf(last),objects=$('instruments');
- objects.innerHTML='';
+ const position=i=>path?(i+.5)/notes.length*100:keyPosition(notes[i]);
+ objects.replaceChildren();
  notes.forEach((pitch,i)=>{
   const hits=path?Number(i<steps):melody.filter(m=>m===pitch).length;
+  const plot=document.createElement('div');plot.className='plot'+(path?' pathPlot':'')+(hits?' litPlot':'');
+  plot.style.left=position(i)+'%';plot.style.setProperty('--plot-space',100/notes.length+'%');
   const token=document.createElement('canvas');token.width=32;token.height=40;
   token.className='instrument'+(hits?' lit':'')+(animate&&i===active?' responding':'');
-  token.dataset.hits=hits;token.style.setProperty('--lift',q.kind==='tower'?i*2+'px':'0px');
-  drawInstrument(token,q.kind,hits);objects.append(token);
+  token.dataset.hits=hits;token.dataset.voice=pitch;
+  drawInstrument(token,q.kind,hits,i);plot.append(token);objects.append(plot);
  });
- const fox=$('traveller');fox.style.left=(active<0?3:(active+.5)/notes.length*100)+'%';
+ const beside=active<0?41:Math.max(4,Math.min(96,position(active)+(position(active)>80?-5:5)));
+ $('traveller').style.left=beside+'%';
  hero.classList.toggle('restored',steps>=score.length);
  $('songCount').textContent=steps+' / '+score.length;
  const count=melody.filter(n=>n===last).length;
  $('sceneAction').textContent=steps>=score.length?q.ending:steps?(path?q.verbs[(steps-1)%2]:q.verbs[count>1?1:0])+' · '+lessonName(score[steps-1][0]):q.start;
+ if(animate&&active>=0)lightConnection(last,objects.children[active].firstChild);
 }
 function replaySong(){
  stopReplay();$('dialog').close();
  const token=renderToken,notes=round.score,quest=quests[saved.world];
  $('landscape').scrollIntoView({block:'nearest'});let step=0;
  function tick(){
-  if(token!==renderToken||$('dialog').open)return;
+  if(token!==renderToken)return;
+  if($('dialog').open){replayTimer=0;staff();renderScene();return}
   if(step===notes.length){replayTimer=0;complete();return}
   const n=notes[step][0];playTone(n.midi,quest.voices,0,.9);
-  renderScene(true,++step);
+  staff(n);renderScene(true,++step);
   replayTimer=setTimeout(tick,step%4===0?610:330);
  }
  tick();
@@ -244,7 +291,7 @@ function noteHint(n,clef=activeClef()){
  const name=lessonName(n);
  return name[0].toUpperCase()+name.slice(1)+' sits '+placement+'.'+(n.acc==='b'?' A flat moves one key lower.':n.acc==='#'?' A sharp moves one key higher.':'');
 }
-function staff(){
+function staff(replayNote){
  const clef=activeClef(),base=clef==='treble'?30:18,spacing=13,step=spacing/2,bottom=89;
  const y=n=>bottom-(n.diatonic-base)*step;
  // A teacher phrase keeps its place on the page as the learner plays through it.
@@ -257,7 +304,7 @@ function staff(){
    for(let i=round.index+1;i<end;i++)if(!sameClef(i)){end=i;break}
   }
  }
- const phrase=round.seq.slice(start,end),allY=phrase.flat().map(y);
+ const phrase=replayNote?[[replayNote]]:round.seq.slice(start,end),allY=phrase.flat().map(y);
  const top=Math.min(7,Math.min(...allY)-40),edge=Math.max(127,Math.max(...allY)+32);
  let svg='<svg class="staff" viewBox="0 '+top+' 410 '+(edge-top)+'" aria-hidden="true">';
  const slot=284/phrase.length,xAt=i=>phrase.length===1?217:91+slot*(i+.5);
@@ -276,7 +323,7 @@ function staff(){
   for(const n of sorted){
    shift=n.diatonic-prev===1?!shift:false;prev=n.diatonic;
    const x=headX+(shift?(down?-13:13):0);
-   svg+='<ellipse cx="'+x+'" cy="'+y(n)+'" rx="9.1" ry="6.3" transform="rotate(-17 '+x+' '+y(n)+')" fill="#22332d"/>';
+   svg+='<ellipse class="writtenPitch" cx="'+x+'" cy="'+y(n)+'" rx="9.1" ry="6.3" transform="rotate(-17 '+x+' '+y(n)+')" fill="#22332d"/>';
    if(n.acc||accidentals.get(n.diatonic)){
     const glyph=n.acc==='#'?'&#xe262;':n.acc==='b'?'&#xe260;':'&#xe261;';
     svg+='<text x="'+(headX-29-(accIdx++%3)*12)+'" y="'+y(n)+'" font-family="Bravura" font-size="52" fill="#26352f">'+glyph+'</text>';
@@ -332,8 +379,8 @@ function draw(){
  const seenKey=activeClef()+':'+n.name;
  round.teaching=!round.teacher&&!saved.seen[seenKey]&&saved.history[saved.world+':'+n.name]===undefined;
  if(round.teaching)round.assisted=true;
- $('worldTitle').textContent=round.teacher?'Teacher challenge':w.name;$('worldBadge').textContent=round.teacher?'TEACHER MODE':'WORLD '+String(saved.world+1).padStart(2,'0');$('worldDesc').textContent=round.teacher?'Read and play your teacher’s sequence.':quests[saved.world].mission;
- $('roundTitle').textContent=round.teacher?'Sight-reading test':current().review?'Echo practice':(saved.songs[saved.world]||0)%3===2?'Pip’s new variation':quests[saved.world].song;$('prompt').textContent=round.teacher?(current().length>1?'Play every pitch in this chord.':'Play the highlighted note and read ahead.'):'Read the note, then play its piano key.';
+ $('worldTitle').textContent=round.teacher?'Teacher challenge':w.name;$('worldBadge').textContent=round.teacher?'TEACHER MODE':'WORLD '+String(saved.world+1).padStart(2,'0');
+ $('roundTitle').textContent=round.teacher?'Sight-reading test':current().review?'Echo practice':(saved.songs[saved.world]||0)%3===2?'Pip’s new variation':quests[saved.world].song;$('prompt').textContent=round.teacher?(current().length>1?'Play every pitch in this chord.':'Play the highlighted note and read ahead.'):current().review?'Echo that note once more.':'Play the note to '+worldActions[saved.world]+'.';
  $('tip').textContent=round.teacher?'“Take your time. Check the clef, find the note, then play.”':'“'+w.tip+'”';
  $('listen').hidden=round.teacher;$('hint').hidden=round.teacher;
  document.querySelectorAll('nav button').forEach(b=>{const active=b.dataset.view===(round.teacher?'teacher':'adventure');b.classList.toggle('active',active);b.setAttribute('aria-current',active?'page':'false')});
@@ -342,20 +389,20 @@ function draw(){
  if(round.teaching){
   const name=lessonName(n);
   const landmark={C:'just left of the two black keys',D:'between the two black keys',E:'just right of the two black keys',F:'just left of the three black keys',G:'between the first two of the three black keys',A:'between the last two of the three black keys',B:'just right of the three black keys'};
-  $('prompt').textContent='Meet '+name+'. Look at the note, then play the glowing key.';
+  $('prompt').textContent='Meet '+name+'. Play the glowing key to '+worldActions[saved.world]+'.';
   $('tip').textContent='“'+noteHint(n)+' '+memoryHint(n)+(n.acc?'':' Find '+n.l+' '+landmark[n.l]+'.')+'”';
-  document.querySelector('[data-pitch="'+n.midi+'"]')?.classList.add('suggest');
+  $('piano').querySelector('[data-pitch="'+n.midi+'"]')?.classList.add('suggest');
  }else if(!round.teacher&&saved.world===0){
   $('tip').textContent='“Start from middle C. Each step from a line to a space moves one white key to the right.”';
  }
 }
 function feedback(text,retry=false){$('feedback').textContent=text;$('feedback').classList.toggle('retry',retry)}
 function soundButton(){$('sound').innerHTML=icon(saved.sound?'volume':'mute');$('sound').setAttribute('aria-label',saved.sound?'Mute sound':'Enable sound');$('sound').title=saved.sound?'Mute sound':'Enable sound'}
-$('sound').onclick=()=>{saved.sound=!saved.sound;if(!saved.sound)stopReplay();save();soundButton()};
+$('sound').onclick=()=>{saved.sound=!saved.sound;save();soundButton()};
 function hint(){
  if(round.done||round.locked||round.teacher)return;round.assisted=true;streak=0;progress();
  const n=current()[0];feedback(noteHint(n)+' '+memoryHint(n),true);
- document.querySelector('[data-pitch="'+n.midi+'"]')?.classList.add('suggest');
+ $('piano').querySelector('[data-pitch="'+n.midi+'"]')?.classList.add('suggest');
 }
 $('hint').onclick=hint;$('listen').onclick=()=>{if(!round.done&&!round.locked){if(!saved.sound){feedback('Sound is muted. Use the speaker button to listen.',true);return}round.assisted=true;streak=0;progress();current().forEach(n=>playTone(n.midi));feedback('Listen, then find the key.',true)}};
 function hit(m){
@@ -363,7 +410,7 @@ function hit(m){
  if(round.done||round.locked||$('dialog').open)return;
  playTone(m);
  if(m<21||m>108)return;
- const n=current(),el=document.querySelector('[data-pitch="'+m+'"]'),match=n.some(x=>x.midi===m);
+ const n=current(),el=$('piano').querySelector('[data-pitch="'+m+'"]'),match=n.some(x=>x.midi===m);
  el?.classList.add(match?'played':'miss');if(el)setTimeout(()=>el.classList.remove(match?'played':'miss'),300);
  if(!match){
   streak=0;round.assisted=true;progress();
@@ -382,7 +429,13 @@ function finishNote(independent){
  else streak=0;
  if(!round.teacher){saved.xp+=independent?10:3;const pitch=current()[0].name;saved.seen[activeClef()+':'+pitch]=true;if(!round.teaching)saved.history[saved.world+':'+pitch]=independent;if(independent)saved.dashLearned[saved.world+':'+pitch]=true}
  save();progress();
- if(!round.teacher){renderScene(true);if(!current().review)worldEcho(current()[0].midi)}
+ if(!round.teacher){
+  const pitch=current()[0].midi;
+  if(current().review){
+   lightConnection(pitch,$('instruments').querySelector('[data-voice="'+pitch+'"]'));
+  }else renderScene(true);
+  worldEcho(pitch);
+ }
  const event=current().review?'Echo answered · '+names:$('sceneAction').textContent;
  feedback(round.teacher?'Answer recorded.':event+(independent?' · +10 XP':' · +3 XP'));
  const token=renderToken;
@@ -403,7 +456,7 @@ function show(title,html){$('dialogTitle').textContent=title;$('dialogBody').inn
 function action(label,fn,cls='primary'){const b=document.createElement('button');b.textContent=label;b.className=cls;b.onclick=fn;return b}
 function actions(...buttons){const row=document.createElement('div');row.className='modalActions';row.append(...buttons);$('dialogBody').append(row)}
 function complete(){
- stopReplay();const firstFinish=!round.done;round.done=true;progress();keyboard();renderScene();
+ stopReplay();staff();const firstFinish=!round.done;round.done=true;progress();keyboard();renderScene();
  if(firstFinish&&!round.teacher){saved.songs[saved.world]=(saved.songs[saved.world]||0)+1;save();updateDashEntry()}
  const total=round.results.filter(r=>!r.lesson).length,counts=round.correct+' / '+total,world=saved.world;
  const cleared=!round.teacher&&total>0&&round.correct/total>=.8&&worlds[world].notes.split(' ').every(n=>saved.history[world+':'+n]);

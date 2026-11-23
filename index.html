@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="en">
-<head><meta charset="utf-8"><meta name="robots" content="noindex, nofollow, noimageindex"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#101722"><title>NoteQuest · Sight-reading adventure</title><link rel="stylesheet" href="style.css?v=firefly-dash"><script src="game.js?v=firefly-dash" defer></script></head>
+<head><meta charset="utf-8"><meta name="robots" content="noindex, nofollow, noimageindex"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#101722"><title>NoteQuest · Sight-reading adventure</title><link rel="stylesheet" href="style.css?v=world-piano"><script src="game.js?v=world-piano" defer></script></head>
 <body>
 <header class="topbar"><div class="navwrap">
 <a class="brand" href="#adventure" aria-label="NoteQuest adventure"><span class="brandmark" data-icon="music"></span>Note<span>Quest</span></a>
@@ -8,18 +8,22 @@
 <button id="sound" class="sound" aria-label="Mute sound" title="Mute sound"></button>
 </div></header>
 <main>
-<section id="landscape" class="hero" aria-labelledby="worldTitle"><div class="heroText"><span class="worldchip"><i data-icon="flag"></i><span id="worldBadge">WORLD 01</span></span><h1 id="worldTitle">Melody Meadow</h1><p id="worldDesc">Wake the bellflowers with Pip.</p></div>
-<div id="worldStage" class="worldStage"><div class="sceneFloor"><div id="instruments"></div><div id="traveller"><canvas id="journeyFox" width="24" height="24" aria-hidden="true"></canvas></div></div>
-<div class="sceneCaption"><span id="sceneAction" aria-live="polite"></span><span id="songCount"></span></div></div></section>
 <div class="layout">
 <section id="game" class="panel game" aria-label="Note practice">
-<div class="gameHead"><div class="gameTitle"><span class="titleIcon" data-icon="pad"></span><h2 id="roundTitle">Note practice</h2></div><span id="counter" class="counter">Note 1 of 8</span></div>
-<p id="prompt" class="prompt">Read the note, then play its piano key.</p>
-<div class="notation"><div class="staffTools"><span class="clefLabel" id="clefLabel">Treble clef</span><button id="listen" class="listen"><i data-icon="volume"></i>Hear note</button></div><div id="score" role="img" aria-label="Read the displayed note"></div></div>
-<div class="keysHeader"><h3>Your piano</h3><div id="octaveControls" hidden><button id="octDown" aria-label="Lower keyboard octave">−</button><span id="octaveLabel"></span><button id="octUp" aria-label="Higher keyboard octave">+</button></div><button class="hint" id="hint"><i data-icon="bulb"></i>Get a hint</button></div>
+<header class="consoleHead"><div><div class="location"><i data-icon="flag"></i><span id="worldBadge"></span><span aria-hidden="true"> / </span><span id="worldTitle"></span></div><h1 id="roundTitle">The Bellflower Song</h1></div><span id="counter" class="counter">Note 1 of 8</span></header>
+<div id="landscape" class="playSurface" aria-label="Playable music world">
+<div class="scenery">
+<div class="scoreControls"><span class="clefLabel" id="clefLabel">Treble clef</span><button id="listen" class="listen"><i data-icon="volume"></i>Hear note</button></div>
+<div class="scoreCloud"><div id="score" role="img" aria-label="Read the displayed note"></div></div>
+<div id="worldStage" class="worldStage"><div class="sceneFloor"><div id="instruments"></div><div id="traveller"><canvas id="journeyFox" width="24" height="24" aria-hidden="true"></canvas></div></div>
+<span id="sceneAction" class="visuallyHidden"></span><span id="songCount" class="visuallyHidden"></span></div>
+</div>
+<div class="teacherOctave" id="octaveControls" hidden><button id="octDown" aria-label="Lower keyboard octave">−</button><span id="octaveLabel"></span><button id="octUp" aria-label="Higher keyboard octave">+</button></div>
 <div id="piano" class="piano" aria-label="Playable piano"></div>
-<div class="controlsFoot"><button id="fieldGuide" class="fieldGuide"><i data-icon="map"></i> Lines &amp; spaces</button><button id="help" aria-label="How to play"><i data-icon="help"></i></button></div>
-<div id="feedback" class="feedback" aria-live="polite"></div></section>
+<svg id="keyLight" preserveAspectRatio="none" aria-hidden="true"></svg>
+</div>
+<div class="cueRail"><div class="cueText"><p id="prompt" class="prompt">Read the note, then play its key.</p><div id="feedback" class="feedback" aria-live="polite"></div></div><button class="hint" id="hint"><i data-icon="bulb"></i>Get a hint</button></div>
+<div class="controlsFoot"><button id="fieldGuide" class="fieldGuide"><i data-icon="map"></i> Lines &amp; spaces</button><button id="help" aria-label="How to play"><i data-icon="help"></i></button></div></section>
 <aside><section class="panel progressPanel"><div class="sideTitle"><i class="gold" data-icon="trophy"></i><h2>Your progress</h2></div><div class="levelRow"><span id="levelName">Level 1</span><b id="xp">0 XP</b></div><div class="bar"><div id="xpBar"></div></div><p class="small" id="levelGoal"></p><div class="stats"><div><span class="sprite flameSprite" aria-hidden="true"></span><div><strong id="streak">0</strong><small>Streak</small></div></div><div><span class="sprite starSprite" aria-hidden="true"></span><div><strong id="best">0</strong><small>Best streak</small></div></div></div><div class="questRow"><h3>Round progress</h3><span id="roundCount">0 / 8</span></div><div class="segments" id="segments"></div>
 <div id="dashEntry" class="dashEntry"><button id="openDash" disabled><span aria-hidden="true">✦</span> Firefly Dash</button><small id="dashAccess">Finish a round and read two pitches on your own to unlock.</small></div></section>
 <section class="panel guide"><div class="guideHead"><div class="foxFrame"><canvas id="fox" width="24" height="24" aria-hidden="true"></canvas></div><div><small>Your guide</small><h2>Pip the Fox</h2></div></div><p id="tip">“Middle C sits on its own little line just below the staff. Look for it!”</p></section></aside>
