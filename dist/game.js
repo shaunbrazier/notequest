@@ -180,10 +180,14 @@ function parseSequence(input){
   return chord;
  });
 }
-const defaults={xp:0,best:0,unlocked:0,world:0,sound:true,history:{},seen:{},songs:{},finished:false};
+const defaults={xp:0,best:0,unlocked:0,world:0,sound:true,history:{},seen:{},songs:{},dashBest:{},dashLearned:{},finished:false};
 let saved;
 try{saved=Object.assign({},defaults,JSON.parse(localStorage.getItem('notequest-v1'))||{})}catch{saved={...defaults}}
 saved.world=Math.min(Math.max(0,Number(saved.world)||0),worlds.length-1);
+// Keep independently read pitches available for the bonus game after later mistakes.
+for(const [key,independent] of Object.entries(saved.history)){
+ if(independent)saved.dashLearned[key]=true;
+}
 function save(){try{localStorage.setItem('notequest-v1',JSON.stringify(saved))}catch{}}
 let round, audio, octave, streak=0, pending=0, renderToken=0, midiAccess, teacherText='C4 D4 E4 G4 E4 D4 C4',teacherClef='treble',teacherLabels=false;
 function playTone(midi,partials=[[1,.19],[2,.055],[3,.025]],delay=0,decay=.75){
@@ -200,7 +204,7 @@ function playTone(midi,partials=[[1,.19],[2,.055],[3,.025]],delay=0,decay=.75){
 }
 function shuffle(items){const a=[...items];for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
 function newRound(teacher,seq,clef){
- clearTimeout(pending);stopReplay();renderToken++;streak=0;
+ clearTimeout(pending);stopDash();stopReplay();renderToken++;streak=0;
  round={teacher,seq,clef,score:seq.slice(),index:0,correct:0,assisted:false,pressed:new Set(),mistakes:[],retry:[],locked:false,done:false,results:[]};
  octave=teacher?Math.max(0,Math.min(7,seq[0][0].oct)):readNote(worlds[saved.world].notes.split(' ')[0]).oct;feedback('');$('dialog').close();draw();
 }
@@ -234,8 +238,8 @@ function lessonName(n){
  }
  return n.l+(n.acc==='#'?' sharp':n.acc==='b'?' flat':'');
 }
-function noteHint(n){
- const bottom=activeClef()==='treble'?30:18,d=n.diatonic-bottom;
+function noteHint(n,clef=activeClef()){
+ const bottom=clef==='treble'?30:18,d=n.diatonic-bottom;
  const placement=d===-2?'on the first little line below the staff':d===-1?'in the space just below the staff':d===9?'in the space just above the staff':d===10?'on the first little line above the staff':d>=0&&d<=8?(d%2===0?'on line '+(d/2+1):'in space '+((d+1)/2))+' counting from the bottom':(d<0?'below':'above')+' the staff';
  const name=lessonName(n);
  return name[0].toUpperCase()+name.slice(1)+' sits '+placement+'.'+(n.acc==='b'?' A flat moves one key lower.':n.acc==='#'?' A sharp moves one key higher.':'');
@@ -284,34 +288,38 @@ function staff(){
  });
  $('score').innerHTML=svg+'</svg>';$('clefLabel').textContent=clef==='treble'?'Treble clef':'Bass clef';
 }
-function keyboard(){
- const p=$('piano');p.innerHTML='';
- const start=12*(octave+1),hide=round.teacher&&!teacherLabels;
+function renderPiano(p,firstOctave,hide,pressed,disabled,play){
+ p.innerHTML='';
+ const start=12*(firstOctave+1);
  function key(m,black,i){
-  const b=document.createElement('button');b.className=black?'black':'white';b.dataset.pitch=m;b.disabled=m<21||m>108||round.done;
+  const b=document.createElement('button');b.className=black?'black':'white';b.dataset.pitch=m;b.disabled=m<21||m>108||disabled;
   const letter=letters[i%7];
-  const name=lessonName({l:letter,acc:black?'#':'',oct:octave+(i===7?1:0)});
+  const name=lessonName({l:letter,acc:black?'#':'',oct:firstOctave+(i===7?1:0)});
   b.setAttribute('aria-label','Play '+name);
   if(black)b.style.left=((i+1)*12.5)+'%';
   else b.innerHTML='<b>'+(hide?'':letter)+'</b><small>'+(!hide&&m===60?'middle C':'&nbsp;')+'</small>';
-  if(round.pressed.has(m))b.classList.add('played');
+  if(pressed.has(m))b.classList.add('played');
   b.addEventListener('pointerdown',e=>{
    delete b.dataset.directTap;
    if(e.pointerType==='touch'||e.pointerType==='pen'){
     b.dataset.directTap='yes';
-    e.preventDefault();hit(m);
+    e.preventDefault();play(m);
    }
   });
   b.addEventListener('click',e=>{
-   if(e.detail===0||b.dataset.directTap!=='yes')hit(m);
+   if(e.detail===0||b.dataset.directTap!=='yes')play(m);
    delete b.dataset.directTap;
   });p.append(b);
  }
  for(let i=0;i<8;i++)key(start+(i===7?12:semitones[i]),false,i);
  [0,1,3,4,5].forEach(i=>key(start+semitones[i]+1,true,i));
+}
+function keyboard(){
+ renderPiano($('piano'),octave,round.teacher&&!teacherLabels,round.pressed,round.done,hit);
  $('octaveControls').hidden=!round.teacher;$('octaveLabel').textContent='From '+lessonName({l:'C',oct:octave});$('octDown').disabled=octave===0;$('octUp').disabled=octave===7;
 }
 function progress(){
+ updateDashEntry();
  const level=Math.floor(saved.xp/100)+1,earned=saved.xp%100;
  $('levelName').textContent='Level '+level;$('xp').textContent=saved.xp+' XP';$('xpBar').style.width=earned+'%';$('levelGoal').textContent=(100-earned)+' XP to level '+(level+1);
  $('streak').textContent=streak;$('best').textContent=saved.best;
@@ -351,6 +359,7 @@ function hint(){
 }
 $('hint').onclick=hint;$('listen').onclick=()=>{if(!round.done&&!round.locked){if(!saved.sound){feedback('Sound is muted. Use the speaker button to listen.',true);return}round.assisted=true;streak=0;progress();current().forEach(n=>playTone(n.midi));feedback('Listen, then find the key.',true)}};
 function hit(m){
+ if(dash&&$('dialog').open){dashHit(m);return}
  if(round.done||round.locked||$('dialog').open)return;
  playTone(m);
  if(m<21||m>108)return;
@@ -371,7 +380,7 @@ function finishNote(independent){
  round.locked=true;const names=current().map(lessonName).join(' + ');round.results.push({names,independent,lesson:round.teaching,review:!!current().review});
  if(independent){round.correct++;streak++;saved.best=Math.max(saved.best,streak)}
  else streak=0;
- if(!round.teacher){saved.xp+=independent?10:3;const pitch=current()[0].name;saved.seen[activeClef()+':'+pitch]=true;if(!round.teaching)saved.history[saved.world+':'+pitch]=independent}
+ if(!round.teacher){saved.xp+=independent?10:3;const pitch=current()[0].name;saved.seen[activeClef()+':'+pitch]=true;if(!round.teaching)saved.history[saved.world+':'+pitch]=independent;if(independent)saved.dashLearned[saved.world+':'+pitch]=true}
  save();progress();
  if(!round.teacher){renderScene(true);if(!current().review)worldEcho(current()[0].midi)}
  const event=current().review?'Echo answered · '+names:$('sceneAction').textContent;
@@ -395,7 +404,7 @@ function action(label,fn,cls='primary'){const b=document.createElement('button')
 function actions(...buttons){const row=document.createElement('div');row.className='modalActions';row.append(...buttons);$('dialogBody').append(row)}
 function complete(){
  stopReplay();const firstFinish=!round.done;round.done=true;progress();keyboard();renderScene();
- if(firstFinish&&!round.teacher){saved.songs[saved.world]=(saved.songs[saved.world]||0)+1;save()}
+ if(firstFinish&&!round.teacher){saved.songs[saved.world]=(saved.songs[saved.world]||0)+1;save();updateDashEntry()}
  const total=round.results.filter(r=>!r.lesson).length,counts=round.correct+' / '+total,world=saved.world;
  const cleared=!round.teacher&&total>0&&round.correct/total>=.8&&worlds[world].notes.split(' ').every(n=>saved.history[world+':'+n]);
  if(cleared){saved.unlocked=Math.max(saved.unlocked,Math.min(world+1,worlds.length-1));if(world===worlds.length-1)saved.finished=true;save()}
@@ -403,6 +412,7 @@ function complete(){
  show(round.teacher?'Challenge complete!':quests[world].ending,(!round.teacher?'<p>'+quests[world].reward+'</p>':'')+'<div class="resultNumber">'+(total?counts:'Lesson cleared')+'</div><p>'+(total?'Read correctly on the first try without help.':'You’ve met the notes. Try them from memory next round.')+'</p>'+(missed.length?'<p>Practise next: <b>'+missed.join(', ')+'</b>.</p>':total?'<p>Every practice pitch played independently!</p>':'')+(!round.teacher?'<p>'+(cleared?(world===worlds.length-1?'You’ve cleared every world!':'You can now explore '+worlds[world+1].name+'.'):'Read every pitch independently and score at least 80% in a round to clear this world.')+'</p>':''));
  if(round.teacher)actions(action('New teacher test',teacherSetup),action('Back to adventure',()=>practice(),'secondary'));
  else actions(action('Replay your tune',replaySong,'secondary'),action(cleared&&world<worlds.length-1?'Next world':'Play another round',()=>practice(cleared?Math.min(world+1,worlds.length-1):world)),action('World map',map,'secondary'));
+ if(!round.teacher&&dashPool().length>=2)actions(action('Play Firefly Dash',openDash,'dashLaunch'));
  feedback('Round complete.');$('feedback').append(' ',action('See results',complete,'hint'));
 }
 function map(){
@@ -432,4 +442,131 @@ $('help').onclick=help;$('close').onclick=()=>$('dialog').close();
 $('octDown').onclick=()=>{if(octave>0){octave--;keyboard()}};$('octUp').onclick=()=>{if(octave<7){octave++;keyboard()}};
 document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{if(b.dataset.view==='map')map();else if(b.dataset.view==='teacher')teacherSetup();else if(round.teacher||round.done)practice();else $('game').scrollIntoView({block:'nearest'})});
 document.querySelector('.brand').onclick=e=>{e.preventDefault();if(round.teacher||round.done)practice();else window.scrollTo(0,0)};
+let dash=null;
+const dashLength=10;
+function dashPool(){
+ const w=saved.world;
+ if(!saved.songs[w]&&saved.unlocked<=w&&!(w===worlds.length-1&&saved.finished))return [];
+ return worlds[w].notes.split(' ').filter(pitch=>saved.dashLearned[w+':'+pitch]===true).map(readNote);
+}
+function updateDashEntry(){
+ $('dashEntry').hidden=round.teacher;
+ const ready=dashPool().length>=2;
+ $('openDash').disabled=!ready||(round.locked&&!round.done);
+ $('dashAccess').textContent=ready?'Catch notes you already know.':'Finish a round and read two pitches on your own to unlock.';
+}
+function stopDash(){
+ if(!dash)return;
+ cancelAnimationFrame(dash.frame);clearTimeout(dash.next);dash=null;
+}
+function openDash(){
+ const pool=dashPool();
+ if(round.teacher||pool.length<2)return;
+ stopReplay();stopDash();
+ show('Firefly Dash','<div class="dashIntro"><span aria-hidden="true">✦</span><p>Ten fireflies are drifting home. Play each note before it reaches the gold line to catch its light.</p></div><p>Three catches in a row make the next note a little faster. If one gets away, time stops so you can find it.</p><p>Tonight’s notes · '+pool.map(lessonName).join(', ')+'</p>');
+ actions(action('Start dash',()=>startDash(pool)),action('Back to the world',()=>$('dialog').close(),'secondary'));
+}
+function startDash(pool){
+ stopDash();
+ const deck=[];
+ while(deck.length<dashLength){
+  const pass=shuffle(pool);
+  if(deck.at(-1)?.midi===pass[0].midi)pass.push(pass.shift());
+  deck.push(...pass);
+ }
+ dash={world:saved.world,clef:worlds[saved.world].clef,deck:deck.slice(0,dashLength),index:0,caught:0,chain:0,limit:7200,elapsed:0,phase:'ready',frame:0,next:0,
+  reduced:window.matchMedia('(prefers-reduced-motion: reduce)').matches};
+ show('Firefly Dash','<div class="dashStatus"><b id="dashCount"></b><span id="dashPace"></span><button id="dashPause" class="secondary">Pause</button></div><div class="dashTrack" id="dashTrack" role="img" aria-label="Read the firefly note on the staff"></div><div class="dashTime" aria-hidden="true"><div id="dashTimeLeft"></div></div><div class="jarLights" id="jarLights" aria-label="Firefly jar"></div><div class="piano dashPiano" id="dashPiano" aria-label="Firefly Dash piano"></div><p id="dashMessage" role="status"></p>');
+ $('dashPause').onclick=toggleDashPause;
+ renderPiano($('dashPiano'),readNote(worlds[dash.world].notes.split(' ')[0]).oct,false,new Set(),false,dashHit);
+ $('jarLights').innerHTML='<span aria-hidden="true">✦</span>'.repeat(dashLength);
+ nextFirefly('Play its note before it reaches the gold line.');
+}
+function fireflyStaff(n,clef){
+ const base=clef==='treble'?30:18,bottom=93,d=n.diatonic-base,y=bottom-7*d;
+ const lineY=i=>bottom-14*i;
+ const lines=Array.from({length:5},(_,i)=>'<path d="M8 '+lineY(i)+'h404"/>').join('');
+ let ledger='';
+ for(let i=-2;i>=d;i-=2)ledger+='<path d="M-15 '+(bottom-7*i)+'h30"/>';
+ for(let i=10;i<=d;i+=2)ledger+='<path d="M-15 '+(bottom-7*i)+'h30"/>';
+ const down=d>=4;
+ const accidental=n.acc?'<text x="-24" y="'+y+'" font-family="Bravura" font-size="56">'+(n.acc==='#'?'&#xe262;':'&#xe260;')+'</text>':'';
+ return '<svg viewBox="0 0 420 141" aria-hidden="true"><g aria-hidden="true"><path d="M77 9h10v4l2 3v8l-2 2H77l-2-2v-8l2-3z" fill="#617c76" stroke="#f4cc7e"/><path d="M77 7h10v3H77z" fill="#f4bd60"/><path d="M79 18h4v4h-4z" fill="#fff3a6"/></g><g stroke="#8da6a5">'+lines+'</g><text x="16" y="'+lineY(clef==='treble'?1:3)+'" font-family="Bravura" font-size="56">'+(clef==='treble'?'&#xe050;':'&#xe062;')+'</text><path stroke="#f4bd60" stroke-dasharray="4 3" stroke-width="2" d="M82 12v113"/><g id="flyingNote" fill="#fff1a5"><g stroke="#fff1a5">'+ledger+'</g>'+accidental+'<g class="flyGlow" transform="translate(0 '+y+')"><circle r="13" fill="#ffe887" opacity=".14"/><path d="M-8 -9h-4v-4h5v3h3v4h-4zM-1 -10v-4h5v4l-4 3z" fill="#c7e8cc" opacity=".78"/></g><ellipse cy="'+y+'" rx="9" ry="6.5" transform="rotate(-15 0 '+y+')"/><path stroke="#fff1a5" stroke-width="2" d="M'+(down?-8:8)+' '+y+'v'+(down?32:-32)+'"/></g></svg>';
+}
+function paintFlight(){
+ const remaining=Math.max(0,1-dash.elapsed/dash.limit);
+ $('flyingNote').setAttribute('transform','translate('+(dash.reduced?235:82+297*remaining)+' 0)');
+ $('dashTimeLeft').style.transform='scaleX('+remaining+')';
+}
+function fly(now){
+ if(!dash||dash.phase!=='flying')return;
+ dash.elapsed+=Math.max(0,now-dash.last);dash.last=now;
+ paintFlight();
+ if(dash.elapsed>=dash.limit){coachFirefly('The firefly landed.');return}
+ dash.frame=requestAnimationFrame(fly);
+}
+function nextFirefly(message){
+ if(!dash||!$('dialog').open){stopDash();return}
+ const n=dash.deck[dash.index];
+ dash.phase='flying';dash.elapsed=0;dash.last=performance.now();
+ $('dashTrack').classList.remove('justCaught');
+ $('dashTrack').innerHTML=fireflyStaff(n,dash.clef);
+ $('dashCount').textContent='Firefly '+(dash.index+1)+' of '+dashLength;
+ $('dashPace').textContent=(dash.clef==='treble'?'Treble':'Bass')+' · '+(dash.limit/1000).toFixed(1)+' s';
+ $('dashMessage').textContent=message;$('dashPause').disabled=false;$('dashPause').textContent='Pause';
+ $('dashPiano').querySelectorAll('.suggest,.played').forEach(b=>b.classList.remove('suggest','played'));
+ paintFlight();
+ if(document.hidden)toggleDashPause();else dash.frame=requestAnimationFrame(fly);
+}
+function coachFirefly(reason){
+ if(dash.phase!=='flying')return;
+ cancelAnimationFrame(dash.frame);dash.phase='coaching';dash.chain=0;dash.limit=Math.min(10000,dash.limit+1200);
+ const n=dash.deck[dash.index];
+ $('dashMessage').textContent=reason+' '+noteHint(n,dash.clef)+' Play the glowing key when you’re ready.';
+ $('dashPiano').querySelector('[data-pitch="'+n.midi+'"]').classList.add('suggest');
+ $('dashPause').disabled=true;$('dashPause').textContent='Untimed';
+}
+function toggleDashPause(){
+ if(!dash)return;
+ if(dash.phase==='flying'){
+  dash.elapsed+=Math.max(0,performance.now()-dash.last);
+  if(dash.elapsed>=dash.limit){paintFlight();coachFirefly('The firefly landed.');return}
+  cancelAnimationFrame(dash.frame);dash.phase='paused';
+  $('dashPause').textContent='Resume';$('dashMessage').textContent='Paused. Your firefly will wait here.';
+ }else if(dash.phase==='paused'){
+  dash.phase='flying';dash.last=performance.now();$('dashPause').textContent='Pause';
+  $('dashMessage').textContent='Catch this note.';dash.frame=requestAnimationFrame(fly);
+ }
+}
+function dashHit(m){
+ if(!dash||!$('dialog').open||!['flying','coaching'].includes(dash.phase))return;
+ const n=dash.deck[dash.index];
+ if(dash.phase==='flying'&&dash.elapsed+performance.now()-dash.last>=dash.limit)coachFirefly('The firefly landed.');
+ playTone(m);
+ if(n.midi!==m){coachFirefly('Let’s look at that note.');return}
+ cancelAnimationFrame(dash.frame);
+ const solo=dash.phase==='flying';dash.phase='between';$('dashPause').disabled=true;
+ let message=solo?'Caught it!':'You found it. The next one will drift more slowly.';
+ if(solo){
+  dash.caught++;dash.chain++;
+  if(dash.chain===3){dash.chain=0;dash.limit=Math.max(3200,dash.limit-850);message='Three in a row! A little faster now.'}
+ }
+ $('dashPiano').querySelector('[data-pitch="'+m+'"]').classList.add('played');
+ $('dashTrack').classList.add('justCaught');
+ $('jarLights').children[dash.index].className=solo?'caught':'guided';
+ $('jarLights').setAttribute('aria-label',dash.caught+' fireflies caught independently');
+ $('dashMessage').textContent=message;
+ dash.index++;
+ dash.next=setTimeout(()=>{if(!dash||!$('dialog').open){stopDash();return}if(dash.index===dashLength)finishDash();else nextFirefly(message)},380);
+}
+function finishDash(){
+ const {world,caught}=dash;
+ saved.dashBest[world]=Math.max(saved.dashBest[world]||0,caught);save();stopDash();
+ show('Fireflies home!','<div class="dashIntro"><span aria-hidden="true">✦</span><p>All ten made it back to '+worlds[world].name+'.</p></div><div class="resultNumber">'+caught+' / '+dashLength+'</div><p>Fireflies caught before they landed. Your best in this world is '+saved.dashBest[world]+'.</p>');
+ actions(action('Another dash',openDash),action('Back to adventure',()=>{if(round.done)complete();else $('dialog').close()},'secondary'));
+}
+$('openDash').onclick=openDash;
+$('dialog').addEventListener('close',()=>{if(!$('dialog').open)stopDash()});
+document.addEventListener('visibilitychange',()=>{if(document.hidden&&dash?.phase==='flying')toggleDashPause()});
+
 practice();
