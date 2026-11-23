@@ -26,7 +26,6 @@ function drawFox(canvas){
  rows.forEach((r,y)=>[...r].forEach((c,x)=>{if(colors[c]){ctx.fillStyle=colors[c];ctx.fillRect(x+1,y,1,1)}}));
 }
 drawFox($('fox'));
-drawFox($('journeyFox'));
 const worlds=[
  {name:'Melody Meadow',desc:'Find middle C, D and E on the treble staff.',clef:'treble',notes:'C4 D4 E4',tip:'Middle C sits on its own little line just below the staff. Look for it!'},
  {name:'Willow Woods',desc:'Follow the notes up through the trees.',clef:'treble',notes:'C4 D4 E4 F4 G4',tip:'Move from a line to the next space and the note goes up one letter.'},
@@ -36,12 +35,12 @@ const worlds=[
  {name:'Chromatic Castle',desc:'Discover the notes between the natural bars.',clef:'treble',notes:'C4 C#4 D4 Eb4 E4 F4 F#4 G4 Ab4 A4 Bb4 B4',tip:'A sharp raises a note by a semitone. A flat lowers it by a semitone.'}
 ];
 const quests=[
- {kind:'meadow',song:'The Bellflower Song',mission:'Pip’s bellflowers are asleep. Play middle C, D and E to open the three flower beds.',start:'Three sleepy flower beds',verbs:['One flower opens','Another petal unfolds'],ending:'The meadow is awake!',reward:'Pip gathers the bellflower seeds for the path into Willow Woods.',voices:[[1,.10],[3,.03],[5,.012]],verses:['C4 D4 E4 E4 D4 C4 D4 C4','E4 D4 C4 D4 E4 E4 D4 C4']},
- {kind:'woods',song:'The Firefly Call',mission:'Pip has lost the woodland trail. Call fireflies into the lanterns to light the way.',start:'The woodland lanterns are dark',verbs:['A firefly lands','The lantern glows brighter'],ending:'The trail is lit!',reward:'Follow the fireflies to the bell tower at the edge of the woods.',voices:[[1,.09],[2,.015],[4,.02]],verses:['C4 E4 G4 F4 E4 D4 G4 C4','G4 E4 C4 D4 F4 E4 D4 C4']},
- {kind:'tower',song:'The Tower Carillon',mission:'The tower bells have fallen silent. Read the pitches to pull their ropes and ring the morning call.',start:'The bells are waiting',verbs:['A bell swings','The bell answers again'],ending:'The tower is ringing!',reward:'The carillon carries across the valley. Down at Bass Brook, Pip hears an answering ripple.',voices:[[1,.09],[2,.055],[4,.024]],verses:['C4 E4 G4 C5 B4 A4 F4 D4 G4 C4','G4 B4 C5 A4 F4 D4 E4 C4']},
- {kind:'brook',song:'The Stepping-Stone Jig',mission:'Pip needs to cross Bass Brook. Each bass note lifts the next stone out of the water.',start:'Pip waits on the riverbank',verbs:['A stepping stone rises','Pip hops across'],ending:'Pip crossed the brook!',reward:'The last stone lifts Pip onto the far bank, beside a cave full of humming crystals.',voices:[[1,.10],[2,.035],[3,.02]],verses:['C3 D3 E3 G3 F3 E3 D3 C3','G3 E3 C3 D3 F3 G3 D3 C3']},
- {kind:'cavern',song:'The Crystal Echo',mission:'Pip needs light underground. Send each bass note into a matching crystal and watch it grow.',start:'The cave is dark',verbs:['A crystal catches the note','The crystal grows taller'],ending:'The cavern is shining!',reward:'The crystals light a stairway up to the castle gate.',voices:[[1,.095],[3,.045],[6,.018]],verses:['C3 G3 E3 A3 F3 D3 B3 C4','C4 B3 G3 A3 F3 E3 D3 C3']},
- {kind:'castle',song:'The Castle Key',mission:'The gate has a musical lock. Play its sharps, flats and naturals to turn the tumblers in order.',start:'The gate is locked',verbs:['A lock tumbler turns','Another pin clicks into place'],ending:'The castle gate is open!',reward:'Pip opens the gate and sends your castle tune ringing over all six worlds.',voices:[[1,.09],[2,.035],[4,.018]],verses:['C4 E4 G4 B4 Bb4 A4 Ab4 G4 F#4 F4 E4 Eb4 D4 C#4 C4','C4 C#4 D4 Eb4 E4 F4 F#4 G4 Ab4 A4 Bb4 B4 G4 E4 C4']}
+ {kind:'meadow',song:'The Bellflower Song',verses:['C4 D4 E4 E4 D4 C4 D4 C4','E4 D4 C4 D4 E4 E4 D4 C4']},
+ {kind:'woods',song:'The Firefly Call',verses:['C4 E4 G4 F4 E4 D4 G4 C4','G4 E4 C4 D4 F4 E4 D4 C4']},
+ {kind:'tower',song:'The Tower Carillon',verses:['C4 E4 G4 C5 B4 A4 F4 D4 G4 C4','G4 B4 C5 A4 F4 D4 E4 C4']},
+ {kind:'brook',song:'The Stepping-Stone Jig',verses:['C3 D3 E3 G3 F3 E3 D3 C3','G3 E3 C3 D3 F3 G3 D3 C3']},
+ {kind:'cavern',song:'The Crystal Echo',verses:['C3 G3 E3 A3 F3 D3 B3 C4','C4 B3 G3 A3 F3 E3 D3 C3']},
+ {kind:'castle',song:'The Castle Key',verses:['C4 E4 G4 B4 Bb4 A4 Ab4 G4 F#4 F4 E4 Eb4 D4 C#4 C4','C4 C#4 D4 Eb4 E4 F4 F#4 G4 Ab4 A4 Bb4 B4 G4 E4 C4']}
 ];
 const memoryPhrases={
  treble:[
@@ -118,122 +117,18 @@ function openGuide(){
 $('fieldGuide').onclick=openGuide;
 
 // Each instrument has its own resting shape and response to repeated pitches.
-function drawInstrument(canvas,kind,hits,voice){
- const g=canvas.getContext('2d'),on=hits>0;
- const rect=(x,y,w,h,c)=>{g.fillStyle=c;g.fillRect(x,y,w,h)};
- const poly=(points,c)=>{g.fillStyle=c;g.beginPath();points.forEach(([x,y],i)=>i?g.lineTo(x,y):g.moveTo(x,y));g.closePath();g.fill()};
- const gold=on?'#ffd174':'#827863',light=on?'#fff5b0':'#a49677';
- g.clearRect(0,0,32,40);
- if(kind==='meadow'){
-  const y=on?Math.max(7,17-hits*3):22;
-  rect(14,y+4,3,34-y,'#47763e');poly([[15,31],[5,24],[10,23],[16,27]],'#83ba52');poly([[16,26],[23,19],[27,19],[22,25]],'#9dce61');
-  if(on){for(const [x,dy] of [[8,0],[16,-4],[20,3],[12,7],[6,5]])rect(x,y+dy,8,7,['#ff96a9','#ffcb6b','#adadff'][voice%3]);rect(12,y+2,8,6,'#ffdd80')}
-  else{
-   poly([[8,21],[11,15],[17,11],[22,16],[22,21],[18,25],[12,25]],'#385139');
-   poly([[10,20],[13,15],[17,13],[20,16],[20,21],[17,23],[13,23]],['#e88fa7','#e1ac55','#ac93d8'][voice%3]);
-   rect(13,16,3,5,'#ffe1bc');rect(12,23,7,2,'#8cac5f');
-  }
-  if(hits>=2){rect(6,25,3,8,'#48733e');rect(3,22,9,5,'#fff1b5');rect(5,20,5,9,'#ffdd85');rect(6,23,3,3,'#be7939')}
-  if(hits>=3){rect(23,24,2,9,'#47763e');rect(20,21,8,5,'#ffd3d8');rect(22,19,4,9,'#ffc0d0');rect(22,22,3,3,'#ffdd80')}
- }else if(kind==='woods'){
-  rect(15,1,2,8,'#786e58');rect(9,8,14,3,gold);poly([[9,11],[23,11],[25,25],[20,31],[12,31],[7,25]],on?'#e5ab48':'#506457');
-  rect(11,14,10,12,on?'#fff59c':'#6e8370');rect(10,29,12,3,gold);rect(14,32,4,2,gold);
-  if(on){rect(4,12,2,2,light);rect(24,7,2,2,light);if(hits>1)rect(27,22,2,2,light)}
- }else if(kind==='tower'){
-  rect(15,0,2,12,'#937154');rect(12,10,8,3,gold);poly([[11,13],[21,13],[23,17],[24,25],[28,30],[4,30],[8,25],[9,17]],gold);
-  rect(11,17,3,9,light);rect(4,29,24,3,on?'#cf8844':'#6b6155');rect(14,32,5,4,light);
- }else if(kind==='brook'){
-  const y=on?20:31;
-  poly([[3,y+1],[8,y-4],[22,y-5],[29,y],[25,y+5],[7,y+6]],on?'#b3c6a7':'#548b98');poly([[4,y+3],[11,y+5],[26,y+2],[24,y+7],[9,y+8]],'#5c8077');
-  rect(1,33,10,2,'#96ded8');rect(17,35,14,2,'#a6e1d5');if(on)rect(11,y-4,8,2,'#c2df83');
- }else if(kind==='cavern'){
-  const y=on?Math.max(2,13-3*hits):23;
-  poly([[7,31],[4,22],[7,19],[13,26],[11,34]],on?'#9c7dff':'#62567d');
-  poly([[10,33],[11,y+7],[18,y],[22,y+6],[18,34]],on?'#c3a0ff':'#77688d');poly([[18,y],[22,y+6],[18,34],[15,33]],on?'#8665e5':'#62567e');
-  poly([[17,34],[21,22],[27,17],[28,23],[23,34]],on?'#87dcf0':'#677d91');rect(5,34,21,3,'#695e85');
- }else{
-  rect(2,13,28,20,'#48405a');rect(4,11,24,3,'#897782');rect(5,16,22,14,'#272e47');
-  rect(13,13,6,19,gold);rect(8,18,16,8,gold);rect(11,16,10,12,gold);rect(13,19,6,6,light);
-  rect(on?20:11,on?24:13,3,5,on?'#aceca7':'#c79a77');rect(4,32,24,3,'#76637a');
- }
-}
 let replayTimer=0;
 function stopReplay(){clearTimeout(replayTimer);replayTimer=0}
-function worldEcho(midi){playTone(midi,quests[saved.world].voices,.09, .95)}
-// The playable octave spans eight natural bars. Accidentals sit on their shared edges.
-function keyPosition(pitch){
- const relative=pitch-12*(octave+1);
- if(relative===12)return 93.75;
- const natural=semitones.indexOf(relative);
- const slot=natural>=0?natural+.5:semitones.indexOf(relative-1)+1;
- return slot*100/8;
-}
-const worldActions=['open a bellflower','light a woodland lantern','ring a tower bell','raise a stepping stone','grow a crystal','turn the next lock'];
-function lightConnection(pitch,target){
- const surface=$('landscape'),layer=$('keyLight'),key=$('piano').querySelector('[data-pitch="'+pitch+'"]');
- if(!key||!target)return;
- const box=surface.getBoundingClientRect(),k=key.getBoundingClientRect(),t=target.getBoundingClientRect();
- const x=k.left+k.width/2-box.left,y=k.top+k.height*.24-box.top;
- const tx=t.left+t.width/2-box.left,ty=t.top+t.height*.48-box.top;
- const curve='M'+x+' '+y+' Q'+x+' '+(ty+22)+' '+tx+' '+ty;
- layer.setAttribute('viewBox','0 0 '+box.width+' '+box.height);
- // Even with motion disabled, the pressed key, stave note and destination light together.
- const trail='<path d="'+curve+'" stroke="#63482b" stroke-width="8"/><path d="'+curve+'" stroke="#ffe595" stroke-width="4"/>';
- let flight='';
- if(!window.matchMedia('(prefers-reduced-motion: reduce)').matches){
-  const head=$('score').querySelector('.writtenPitch');
-  if(head){
-   const h=head.getBoundingClientRect(),sx=h.left+h.width/2-box.left,sy=h.top+h.height/2-box.top;
-   const drop='M'+sx+' '+sy+' Q'+sx+' '+(ty+12)+' '+tx+' '+ty;
-   flight='<g><ellipse rx="7" ry="5" transform="rotate(-16)" fill="#ffe48b" stroke="#35412c" stroke-width="2"/><path d="M6 0v-20" stroke="#35412c" stroke-width="2.5"/><animateMotion dur=".36s" path="'+drop+'" fill="freeze"/><animate attributeName="opacity" values="1;1;0" keyTimes="0;.65;1" dur=".55s" fill="freeze"/></g>';
-  }
-  flight+='<circle r="5" fill="#fff9cd"><animateMotion dur=".29s" path="'+curve+'" fill="freeze"/></circle>';
- }
- layer.innerHTML=trail+'<circle cx="'+tx+'" cy="'+ty+'" r="11" stroke="#fff4a9" stroke-width="2"/>'+flight;
- $('score').classList.add('noteAccepted');
- $('piano').querySelectorAll('.keyResonating').forEach(el=>el.classList.remove('keyResonating'));
- key.classList.add('keyResonating');
-}
-function renderScene(animate=false,playedOverride){
- const hero=$('landscape'),stage=$('worldStage'),q=quests[saved.world];
- stage.hidden=round.teacher;hero.dataset.world=round.teacher?'teacher':q.kind;
- $('keyLight').replaceChildren();$('score').classList.remove('noteAccepted');
- $('piano').querySelectorAll('.keyResonating').forEach(el=>el.classList.remove('keyResonating'));
- if(round.teacher)return;
- const score=round.score,steps=playedOverride??round.results.filter(r=>!r.review).length;
- const melody=score.slice(0,steps).map(chord=>chord[0].midi),last=melody.at(-1);
- const path=q.kind==='brook'||q.kind==='castle';
- const notes=path?score.map(chord=>chord[0].midi):[...new Set(score.map(chord=>chord[0].midi))].sort((a,b)=>a-b);
- const active=path?steps-1:notes.indexOf(last),objects=$('instruments');
- const position=i=>path?(i+.5)/notes.length*100:keyPosition(notes[i]);
- objects.replaceChildren();
- notes.forEach((pitch,i)=>{
-  const hits=path?Number(i<steps):melody.filter(m=>m===pitch).length;
-  const plot=document.createElement('div');plot.className='plot'+(path?' pathPlot':'')+(hits?' litPlot':'');
-  plot.style.left=position(i)+'%';plot.style.setProperty('--plot-space',100/notes.length+'%');
-  const token=document.createElement('canvas');token.width=32;token.height=40;
-  token.className='instrument'+(hits?' lit':'')+(animate&&i===active?' responding':'');
-  token.dataset.hits=hits;token.dataset.voice=pitch;
-  drawInstrument(token,q.kind,hits,i);plot.append(token);objects.append(plot);
- });
- const beside=active<0?41:Math.max(4,Math.min(96,position(active)+(position(active)>80?-5:5)));
- $('traveller').style.left=beside+'%';
- hero.classList.toggle('restored',steps>=score.length);
- $('songCount').textContent=steps+' / '+score.length;
- const count=melody.filter(n=>n===last).length;
- $('sceneAction').textContent=steps>=score.length?q.ending:steps?(path?q.verbs[(steps-1)%2]:q.verbs[count>1?1:0])+' · '+lessonName(score[steps-1][0]):q.start;
- if(animate&&active>=0)lightConnection(last,objects.children[active].firstChild);
-}
 function replaySong(){
  stopReplay();$('dialog').close();
- const token=renderToken,notes=round.score,quest=quests[saved.world];
+ const token=renderToken,notes=round.score;
  $('landscape').scrollIntoView({block:'nearest'});let step=0;
  function tick(){
   if(token!==renderToken)return;
-  if($('dialog').open){replayTimer=0;staff();renderScene();return}
+  if($('dialog').open){replayTimer=0;staff();return}
   if(step===notes.length){replayTimer=0;complete();return}
-  const n=notes[step][0];playTone(n.midi,quest.voices,0,.9);
-  staff(n);renderScene(true,++step);
+  notes[step].forEach(n=>playTone(n.midi));
+  trailStaff(notes,step,{accepted:true,travel:step>0});step++;
   replayTimer=setTimeout(tick,step%4===0?610:330);
  }
  tick();
@@ -260,6 +155,7 @@ function parseSequence(input){
 const defaults={xp:0,best:0,unlocked:0,world:0,sound:true,history:{},seen:{},songs:{},dashBest:{},dashLearned:{},instrument:'glockenspiel',finished:false};
 let saved;
 try{saved=Object.assign({},defaults,JSON.parse(localStorage.getItem('notequest-v1'))||{})}catch{saved={...defaults}}
+if(!['glockenspiel','piano','xylophone'].includes(saved.instrument))saved.instrument=defaults.instrument;
 saved.world=Math.min(Math.max(0,Number(saved.world)||0),worlds.length-1);
 // Keep independently read pitches available for the bonus game after later mistakes.
 for(const [key,independent] of Object.entries(saved.history)){
@@ -267,16 +163,19 @@ for(const [key,independent] of Object.entries(saved.history)){
 }
 function save(){try{localStorage.setItem('notequest-v1',JSON.stringify(saved))}catch{}}
 let round, audio, octave, streak=0, pending=0, renderToken=0, midiAccess, teacherText='C4 D4 E4 G4 E4 D4 C4',teacherClef='treble',teacherLabels=false;
-function playTone(midi,partials,delay=0,decay){
- const piano=saved.instrument==='piano';
- partials??=piano?[[1,.19],[2,.055],[3,.025]]:[[1,.19],[2.76,.035],[5.4,.019]];
- decay??=piano ? .75 : 1.1;
+const instruments={
+ piano:{partials:[[1,.19],[2,.055],[3,.025]],decay:.75},
+ glockenspiel:{partials:[[1,.19],[2.76,.035],[5.4,.019]],decay:1.1},
+ xylophone:{partials:[[1,.21],[3,.075],[6.1,.024]],decay:.38}
+};
+function playTone(midi){
+ const {partials,decay}=instruments[saved.instrument];
  if(!saved.sound)return;
- instrumentMic.blockSpeaker(delay+decay);
+ instrumentMic.blockSpeaker(decay);
  try{
   audio??=new (window.AudioContext||window.webkitAudioContext)();if(audio.state==='suspended')audio.resume().catch(()=>{});
   const writtenOffset=instrumentMic.session?.phase==='play'?instrumentMic.session.offset:0;
-  const time=audio.currentTime+delay,frequency=440*2**((midi-writtenOffset-69)/12);
+  const time=audio.currentTime,frequency=440*2**((midi-writtenOffset-69)/12);
   partials.forEach(([harmonic,volume])=>{
    const osc=audio.createOscillator(),gain=audio.createGain();osc.frequency.value=frequency*harmonic;
    gain.gain.setValueAtTime(.0001,time);gain.gain.exponentialRampToValueAtTime(volume,time+.009);gain.gain.exponentialRampToValueAtTime(.0001,time+decay/Math.sqrt(harmonic));
@@ -287,7 +186,7 @@ function playTone(midi,partials,delay=0,decay){
 function shuffle(items){const a=[...items];for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
 function newRound(teacher,seq,clef){
  clearTimeout(pending);stopDash();stopReplay();renderToken++;streak=0;
- round={teacher,seq,clef,score:seq.slice(),index:0,correct:0,assisted:false,pressed:new Set(),mistakes:[],retry:[],locked:false,done:false,results:[]};
+ round={teacher,seq,clef,score:seq.slice(),index:0,correct:0,assisted:false,pressed:new Set(),mistakes:[],locked:false,done:false,results:[]};
  octave=teacher?Math.max(0,Math.min(7,seq[0][0].oct)):readNote(worlds[saved.world].notes.split(' ')[0]).oct;feedback('');$('dialog').close();draw();
 }
 function practice(world=saved.world){
@@ -306,8 +205,14 @@ function practice(world=saved.world){
  }
  newRound(false,melody.map(symbol=>[readNote(symbol)]),w.clef);
  const weak=pool.filter(name=>saved.history[world+':'+name]===false);
- if(weak.length)round.retry.push({name:shuffle(weak)[0],after:2});
+ if(weak.length)addEncore(shuffle(weak)[0]);
 
+}
+function addEncore(name){
+ const encores=round.seq.slice(round.score.length);
+ if(encores.length>=2||encores.some(chord=>chord[0].name===name))return;
+ const chord=[readNote(name)];chord.review=true;
+ round.seq.push(chord);
 }
 function current(){return round.seq[round.index]}
 function activeClef(){return round.clef==='auto'?(current()[0].midi<60?'bass':'treble'):round.clef}
@@ -326,49 +231,105 @@ function noteHint(n,clef=activeClef()){
  const name=lessonName(n);
  return name[0].toUpperCase()+name.slice(1)+' sits '+placement+'.'+(n.acc==='b'?' A flat moves a semitone lower.':n.acc==='#'?' A sharp moves a semitone higher.':'');
 }
-function staff(replayNote){
+function writtenNotes(notes,headX,base,bottom,step,y,accidentals){
+  const ys=notes.map(y),sorted=[...notes].sort((a,b)=>a.diatonic-b.diatonic),down=(Math.max(...ys)+Math.min(...ys))/2<=bottom-4*step;
+  const ledger=new Set();
+  for(const n of sorted){const d=n.diatonic-base;for(let i=-2;i>=d;i-=2)ledger.add(i);for(let i=10;i<=d;i+=2)ledger.add(i)}
+  let svg='';
+  for(const n of ledger)svg+='<path d="M'+(headX-17)+' '+(bottom-n*step)+'h34" stroke="currentColor" stroke-width="2"/>';
+  let prev=-20,shift=false,accIdx=0;
+  for(const n of sorted){
+   shift=n.diatonic-prev===1?!shift:false;prev=n.diatonic;
+   const x=headX+(shift?(down?-13:13):0);
+   svg+='<ellipse class="writtenPitch" cx="'+x+'" cy="'+y(n)+'" rx="9.1" ry="6.3" transform="rotate(-17 '+x+' '+y(n)+')" fill="currentColor"/>';
+   if(n.acc||accidentals.get(n.diatonic)){
+    const glyph=n.acc==='#'?'&#xe262;':n.acc==='b'?'&#xe260;':'&#xe261;';
+    svg+='<text x="'+(headX-29-(accIdx++%3)*12)+'" y="'+y(n)+'" font-family="Bravura" font-size="52" fill="currentColor">'+glyph+'</text>';
+   }
+   accidentals.set(n.diatonic,n.acc);
+  }
+  const stemX=headX+(down?-8:8);
+  svg+='<path stroke="currentColor" stroke-width="2.3" d="M'+stemX+' '+(down?Math.min(...ys):Math.max(...ys))+' V'+(down?Math.max(...ys)+34:Math.min(...ys)-34)+'"/>';
+
+ return svg;
+}
+// The stave scrolls beneath the firefly. Every input uses hit(), so a real strike
+// and a screen tap advance the same written pitch.
+function trailStaff(sequence,index,{accepted=false,travel=false,finished=false}={}){
+ const clef=activeClef(),base=clef==='treble'?30:18,bottom=92,step=6;
+ const y=n=>bottom-(n.diatonic-base)*step;
+ const first=107,stride=70,pageStart=i=>Math.floor(i/3)*3;
+ const offset=-pageStart(index)*stride,priorIndex=Math.max(0,index-1);
+ const priorOffset=-pageStart(priorIndex)*stride;
+ const focus=first+index*stride+offset,priorFocus=first+priorIndex*stride+priorOffset;
+ const animated=travel&&!matchMedia('(prefers-reduced-motion: reduce)').matches;
+ const active=sequence[index][0],arrival=y(active)+20;
+ const prior=sequence[Math.max(0,index-1)][0],lift=y(prior)+20-arrival;
+ const clipId='musicWindow',end=first+(sequence.length-1)*stride+33;
+ let svg='<svg class="staff trailStaff" viewBox="0 0 410 145" aria-hidden="true"><defs><clipPath id="'+clipId+'"><rect x="61" width="346" height="145"/></clipPath></defs>';
+ const noteX=i=>first+i*stride;
+ // The coloured section of each of the five real stave lines is the trail already read.
+ const reached=finished?focus+33:accepted?focus:index?Math.max(65,focus-stride):65;
+ for(let i=0;i<5;i++){
+  const line=bottom-i*2*step;
+  svg+='<path class="trailLine" d="M9 '+line+'H'+Math.min(405,end+offset+4)+'"/><path class="readLine" d="M9 '+line+'H'+reached+'"/>';
+ }
+ svg+='<text x="13" y="'+(clef==='treble'?bottom-step*2:bottom-step*6)+'" font-family="Bravura" font-size="48" fill="#fff7d9">'+(clef==='treble'?'&#xe050;':'&#xe062;')+'</text>';
+ svg+='<g clip-path="url(#'+clipId+')"><g transform="translate('+offset+' 0)">';
+ if(animated&&priorOffset!==offset)svg+='<animateTransform attributeName="transform" type="translate" from="'+priorOffset+' 0" to="'+offset+' 0" dur=".26s" fill="freeze"/>';
+ const accidentals=new Map();
+ sequence.forEach((notes,i)=>{
+  const x=noteX(i),here=i===index,read=i<index||(here&&accepted);
+  if(here)svg+='<rect class="targetLane" x="'+(x-24)+'" y="9" width="48" height="125" rx="12"/>';
+  svg+='<g class="trailNote '+(read?'read':here?'target':'ahead')+'" data-step="'+i+'">'+writtenNotes(notes,x,base,bottom,step,y,accidentals)+'</g>';
+  if(read&&(!here||finished)){
+   const dotY=y(notes[0])+19;
+   svg+='<path class="trailCheck" d="M'+(x-5)+' '+dotY+'l3 3 7-7"/>';
+  }
+ });
+ svg+='<path d="M'+end+' '+(bottom-48)+'v48m4-48v48" stroke="#fff3d6" stroke-width="2"/></g></g>';
+ if(!finished){
+  svg+='<g transform="translate('+focus+' '+arrival+')"><g class="trailFly">';
+  if(animated)svg+='<animateMotion dur=".26s" path="M'+(priorFocus-focus)+' '+lift+' Q'+((priorFocus-focus)/2)+' '+(Math.min(0,lift)-20)+' 0 0" fill="freeze"/>';
+  svg+='<circle r="10" fill="#ffd759" opacity=".20"/><path d="M0-1Q-10-12-9-5T-1 0M0-1Q10-12 9-5T1 0" fill="#ecfff2"/><ellipse ry="4.5" rx="3.6" fill="#ffdf63" stroke="#654722"/><circle cy="-3.6" r="2.1" fill="#4b3828"/></g></g>';
+ }
+ if(accepted&&!finished)svg+='<circle class="noteBloom" cx="'+focus+'" cy="'+y(active)+'" r="14"/>';
+ $('score').innerHTML=svg+'</svg>';
+ $('score').setAttribute('aria-label',(clef==='treble'?'Treble':'Bass')+' clef. '+(finished?'Tune complete.':'Follow the firefly. Note '+(index+1)+' of '+sequence.length+'.'));
+}
+function staff(travel=false){
+ const clefName=activeClef()==='treble'?'Treble clef':'Bass clef';
+ $('clefLabel').textContent=clefName;
+ if(!round.teacher){
+  const encore=current().review;
+  const sequence=encore?round.seq.slice(round.score.length):round.score;
+  const index=encore?round.index-round.score.length:round.index;
+  trailStaff(sequence,index,{travel:travel&&index>0,accepted:round.locked,finished:round.done});
+  return;
+ }
+ $('score').setAttribute('aria-label','Read the highlighted note or chord in '+clefName);
  const clef=activeClef(),base=clef==='treble'?30:18,spacing=13,step=spacing/2,bottom=89;
  const y=n=>bottom-(n.diatonic-base)*step;
  // A teacher phrase keeps its place on the page as the learner plays through it.
- let start=round.index,end=start+1;
- if(round.teacher){
-  start=Math.floor(round.index/4)*4;end=Math.min(round.seq.length,start+4);
+ let start=Math.floor(round.index/4)*4,end=Math.min(round.seq.length,start+4);
   if(round.clef==='auto'){
    const sameClef=i=>(round.seq[i][0].midi<60?'bass':'treble')===clef;
    for(let i=round.index-1;i>=start;i--)if(!sameClef(i)){start=i+1;break}
    for(let i=round.index+1;i<end;i++)if(!sameClef(i)){end=i;break}
   }
- }
- const phrase=replayNote?[[replayNote]]:round.seq.slice(start,end),allY=phrase.flat().map(y);
+ const phrase=round.seq.slice(start,end),allY=phrase.flat().map(y);
  const top=Math.min(7,Math.min(...allY)-40),edge=Math.max(127,Math.max(...allY)+32);
  let svg='<svg class="staff" viewBox="0 '+top+' 410 '+(edge-top)+'" aria-hidden="true">';
  const slot=284/phrase.length,xAt=i=>phrase.length===1?217:91+slot*(i+.5);
- if(round.teacher)svg+='<rect x="'+(xAt(round.index-start)-22)+'" y="'+(top+2)+'" width="44" height="'+(edge-top-4)+'" rx="5" fill="#cee5bf"/>';
+ svg+='<rect x="'+(xAt(round.index-start)-22)+'" y="'+(top+2)+'" width="44" height="'+(edge-top-4)+'" rx="5" fill="#cee5bf"/>';
  svg+='<g stroke="#56625b" stroke-width="1.4">';
  for(let i=0;i<5;i++)svg+='<path d="M26 '+(bottom-spacing*i)+'h358"/>';
  svg+='</g><text x="46" y="'+(clef==='treble'?bottom-spacing:bottom-3*spacing)+'" font-family="Bravura" font-size="52" fill="#26352f">'+(clef==='treble'?'&#xe050;':'&#xe062;')+'</text>';
  const accidentals=new Map();
- phrase.forEach((notes,index)=>{
-  const headX=xAt(index),ys=notes.map(y),sorted=[...notes].sort((a,b)=>a.diatonic-b.diatonic),down=(Math.max(...ys)+Math.min(...ys))/2<=bottom-2*spacing;
-  const ledger=new Set();
-  for(const n of sorted){const d=n.diatonic-base;for(let i=-2;i>=d;i-=2)ledger.add(i);for(let i=10;i<=d;i+=2)ledger.add(i)}
-  svg+='<g opacity="'+(index+start<round.index?'.45':'1')+'">';
-  for(const n of ledger)svg+='<path d="M'+(headX-17)+' '+(bottom-n*step)+'h34" stroke="#26352f" stroke-width="2"/>';
-  let prev=-20,shift=false,accIdx=0;
-  for(const n of sorted){
-   shift=n.diatonic-prev===1?!shift:false;prev=n.diatonic;
-   const x=headX+(shift?(down?-13:13):0);
-   svg+='<ellipse class="writtenPitch" cx="'+x+'" cy="'+y(n)+'" rx="9.1" ry="6.3" transform="rotate(-17 '+x+' '+y(n)+')" fill="#22332d"/>';
-   if(n.acc||accidentals.get(n.diatonic)){
-    const glyph=n.acc==='#'?'&#xe262;':n.acc==='b'?'&#xe260;':'&#xe261;';
-    svg+='<text x="'+(headX-29-(accIdx++%3)*12)+'" y="'+y(n)+'" font-family="Bravura" font-size="52" fill="#26352f">'+glyph+'</text>';
-   }
-   accidentals.set(n.diatonic,n.acc);
-  }
-  const stemX=headX+(down?-8:8);
-  svg+='<path stroke="#22332d" stroke-width="2.3" d="M'+stemX+' '+(down?Math.min(...ys):Math.max(...ys))+' V'+(down?Math.max(...ys)+34:Math.min(...ys)-34)+'"/></g>';
+ phrase.forEach((notes,i)=>{
+  svg+='<g color="#22332d" opacity="'+(i+start<round.index?'.45':'1')+'">'+writtenNotes(notes,xAt(i),base,bottom,step,y,accidentals)+'</g>';
  });
- $('score').innerHTML=svg+'</svg>';$('clefLabel').textContent=clef==='treble'?'Treble clef':'Bass clef';
+ $('score').innerHTML=svg+'</svg>';
 }
 function renderPiano(p,firstOctave,hide,pressed,disabled,play){
  p.innerHTML='';p.setAttribute('aria-label','Playable '+saved.instrument);
@@ -412,25 +373,28 @@ function progress(){
  const level=Math.floor(saved.xp/100)+1,earned=saved.xp%100;
  $('levelName').textContent='Level '+level;$('xp').textContent=saved.xp+' XP';$('xpBar').style.width=earned+'%';$('levelGoal').textContent=(100-earned)+' XP to level '+(level+1);
  $('streak').textContent=streak;$('best').textContent=saved.best;
- const total=round.seq.length,completed=round.done?total:round.index;
- $('counter').textContent=round.done?'Round complete':'Note '+(round.index+1)+' of '+total;$('roundCount').textContent=completed+' / '+total;
+ const encore=!!current().review,start=encore?round.score.length:0;
+ const total=encore?round.seq.length-start:round.score.length;
+ const completed=round.done?total:Math.min(total,round.results.length-start);
+ $('counter').textContent=round.done?'Round complete':(encore?'Encore ':'Note ')+(round.index-start+1)+' of '+total;$('roundCount').textContent=completed+' / '+total;
  $('segments').innerHTML=Array.from({length:Math.min(total,16)},(_,i)=>'<span class="'+((i+1)*total/Math.min(total,16)<=completed?'done':'')+'"></span>').join('');
 }
-function draw(){
+function draw(travel=false){
  const w=worlds[saved.world],n=current()[0];
+ $('landscape').dataset.world=round.teacher?'teacher':quests[saved.world].kind;
  const seenKey=activeClef()+':'+n.name;
  round.teaching=!round.teacher&&!saved.seen[seenKey]&&saved.history[saved.world+':'+n.name]===undefined;
  if(round.teaching)round.assisted=true;
  $('worldTitle').textContent=round.teacher?'Teacher challenge':w.name;$('worldBadge').textContent=round.teacher?'TEACHER MODE':'WORLD '+String(saved.world+1).padStart(2,'0');
- $('roundTitle').textContent=round.teacher?'Sight-reading test':current().review?'Echo practice':(saved.songs[saved.world]||0)%3===2?'Pip’s new variation':quests[saved.world].song;$('prompt').textContent=round.teacher?(current().length>1?'Strike each bar of the chord, one at a time.':'Play the highlighted note and read ahead.'):current().review?'Echo that note once more.':'Play the note to '+worldActions[saved.world]+'.';
+ $('roundTitle').textContent=round.teacher?'Sight-reading test':current().review?'Encore practice':(saved.songs[saved.world]||0)%3===2?'Melody variation':quests[saved.world].song;$('prompt').textContent=round.teacher?(current().length>1?'Strike each bar of the chord, one at a time.':'Play the highlighted note and read ahead.'):current().review?'Encore! Play this note once more.':'Play the gold note to move the firefly.';
  $('tip').textContent=round.teacher?'“Take your time. Check the clef, find the note, then play.”':'“'+w.tip+'”';
  $('listen').hidden=round.teacher;$('hint').hidden=round.teacher;
  document.querySelectorAll('nav button').forEach(b=>{const active=b.dataset.view===(round.teacher?'teacher':'adventure');b.classList.toggle('active',active);b.setAttribute('aria-current',active?'page':'false')});
- staff();keyboard();progress();soundButton();renderScene();
+ staff(travel);keyboard();progress();soundButton();
  $('fieldGuide').hidden=round.teacher;
  if(round.teaching){
   const name=lessonName(n);
-  $('prompt').textContent='Meet '+name+'. Strike its bar to '+worldActions[saved.world]+'.';
+  $('prompt').textContent='Meet '+name+'. Strike the glowing bar to move the firefly.';
   $('tip').textContent='“'+noteHint(n)+' '+memoryHint(n)+'”';
   $('piano').querySelector('[data-pitch="'+n.midi+'"]')?.classList.add('suggest');
  }else if(!round.teacher&&saved.world===0){
@@ -446,10 +410,10 @@ function instrumentWords(text){
  return text.replace(/\bbars\b/g,'keys').replace(/\bbar\b/g,'key').replace(/\bStrike\b/g,'Play').replace(/\bstrike\b/g,'play');
 }
 function styleInstrument(){
- const isPiano=saved.instrument==='piano';
- document.documentElement.dataset.instrument=isPiano?'piano':'glockenspiel';
- $('choosePiano').setAttribute('aria-pressed',isPiano);
- $('chooseGlock').setAttribute('aria-pressed',!isPiano);
+ document.documentElement.dataset.instrument=saved.instrument;
+ for(const [id,name] of Object.entries({chooseGlock:'glockenspiel',choosePiano:'piano',chooseXylo:'xylophone'})){
+  $(id).setAttribute('aria-pressed',name===saved.instrument);
+ }
  $('piano').setAttribute('aria-label','Playable '+saved.instrument);
 }
 function chooseInstrument(value){
@@ -459,6 +423,7 @@ function chooseInstrument(value){
  else if(!instrumentMic.session)instrumentMic.message(instrumentWords('Tap the bars, or let the iPad listen to yours.'));
  if(!round.locked&&!round.done)draw();
 }
+$('chooseXylo').onclick=()=>chooseInstrument('xylophone');
 $('choosePiano').onclick=()=>chooseInstrument('piano');
 $('chooseGlock').onclick=()=>chooseInstrument('glockenspiel');
 function soundButton(){$('sound').innerHTML=icon(saved.sound?'volume':'mute');$('sound').setAttribute('aria-label',saved.sound?'Mute sound':'Enable sound');$('sound').title=saved.sound?'Mute sound':'Enable sound'}
@@ -479,61 +444,46 @@ function hit(m,fromMicrophone=false){
  if(!match){
   streak=0;round.assisted=true;progress();
   if(round.teacher){finishNote(false);return}
-  const previous=round.mistakes.includes(round.index);if(!previous){round.mistakes.push(round.index);if(!current().review)round.retry.push({name:n[0].name,after:round.index+2})}
+  const previous=round.mistakes.includes(round.index);if(!previous){round.mistakes.push(round.index);if(!current().review)addEncore(n[0].name)}
   feedback(previous?noteHint(n[0]):(m>n[0].midi?'Try a lower bar.':'Try a higher bar.')+' Look at the line or space.',true);
   if(previous)hint();return;
  }
  round.pressed.add(m);
  if(round.pressed.size<n.length){feedback(round.pressed.size+' of '+n.length+' chord notes played.');return}
- finishNote(!round.assisted,fromMicrophone);
+ finishNote(!round.assisted);
 }
-function finishNote(independent,fromMicrophone=false){
+function finishNote(independent){
  round.locked=true;const names=current().map(lessonName).join(' + ');round.results.push({names,independent,lesson:round.teaching,review:!!current().review});
  if(independent){round.correct++;streak++;saved.best=Math.max(saved.best,streak)}
  else streak=0;
  if(!round.teacher){saved.xp+=independent?10:3;const pitch=current()[0].name;saved.seen[activeClef()+':'+pitch]=true;if(!round.teaching)saved.history[saved.world+':'+pitch]=independent;if(independent)saved.dashLearned[saved.world+':'+pitch]=true}
  save();progress();
- if(!round.teacher){
-  const pitch=current()[0].midi;
-  if(current().review){
-   lightConnection(pitch,$('instruments').querySelector('[data-voice="'+pitch+'"]'));
-  }else renderScene(true);
-  if(!fromMicrophone)worldEcho(pitch);
- }
- const event=current().review?'Echo answered · '+names:$('sceneAction').textContent;
- feedback(round.teacher?'Answer recorded.':event+(independent?' · +10 XP':' · +3 XP'));
+ if(!round.teacher)staff();
+ feedback(round.teacher?'Answer recorded.':names+' · '+(independent?'+10 XP':'+3 XP'));
  const token=renderToken;
  pending=setTimeout(()=>{if(token!==renderToken)return;if(round.index+1>=round.seq.length){complete();return}
   round.index++;
-  if(!round.teacher){
-   const due=round.retry.findIndex(x=>x.after<=round.index);
-   if(due>=0&&round.seq.length<round.score.length+2){
-    const echo=[readNote(round.retry.splice(due,1)[0].name)];
-    echo.review=true;
-    round.seq.splice(round.index,0,echo);
-   }
-  }
-  round.pressed.clear();round.locked=false;round.assisted=false;feedback('');draw();
- },round.teacher?320:700);
+  round.pressed.clear();round.locked=false;round.assisted=false;feedback('');draw(!round.teacher);
+ },round.teacher?320:340);
 }
 function show(title,html){$('dialogTitle').textContent=title;$('dialogBody').innerHTML=html;paintIcons($('dialogBody'));if(!$('dialog').open)$('dialog').showModal()}
 function action(label,fn,cls='primary'){const b=document.createElement('button');b.textContent=label;b.className=cls;b.onclick=fn;return b}
 function actions(...buttons){const row=document.createElement('div');row.className='modalActions';row.append(...buttons);$('dialogBody').append(row)}
 function complete(){
- stopReplay();staff();const firstFinish=!round.done;round.done=true;progress();keyboard();renderScene();
+ stopReplay();const firstFinish=!round.done;round.done=true;staff();progress();keyboard();
  if(firstFinish&&!round.teacher){saved.songs[saved.world]=(saved.songs[saved.world]||0)+1;save();updateDashEntry()}
  const total=round.results.filter(r=>!r.lesson).length,counts=round.correct+' / '+total,world=saved.world;
  const cleared=!round.teacher&&total>0&&round.correct/total>=.8&&worlds[world].notes.split(' ').every(n=>saved.history[world+':'+n]);
  if(cleared){saved.unlocked=Math.max(saved.unlocked,Math.min(world+1,worlds.length-1));if(world===worlds.length-1)saved.finished=true;save()}
  const missed=[...new Set(round.results.filter(x=>!x.independent&&!x.lesson).map(x=>x.names))];
- show(round.teacher?'Challenge complete!':quests[world].ending,(!round.teacher?'<p>'+quests[world].reward+'</p>':'')+'<div class="resultNumber">'+(total?counts:'Lesson cleared')+'</div><p>'+(total?'Read correctly on the first try without help.':'You’ve met the notes. Try them from memory next round.')+'</p>'+(missed.length?'<p>Practise next: <b>'+missed.join(', ')+'</b>.</p>':total?'<p>Every practice pitch played independently!</p>':'')+(!round.teacher?'<p>'+(cleared?(world===worlds.length-1?'You’ve cleared every world!':'You can now explore '+worlds[world+1].name+'.'):'Read every pitch independently and score at least 80% in a round to clear this world.')+'</p>':''));
+ show(round.teacher?'Challenge complete!':'Tune complete!',(!round.teacher?'<p>You reached the final bar. Listen back to the tune you just played.</p>':'')+'<div class="resultNumber">'+(total?counts:'Lesson cleared')+'</div><p>'+(total?'Read correctly on the first try without help.':'You’ve met the notes. Try them from memory next round.')+'</p>'+(missed.length?'<p>Practise next: <b>'+missed.join(', ')+'</b>.</p>':total?'<p>Every practice pitch played independently!</p>':'')+(!round.teacher?'<p>'+(cleared?(world===worlds.length-1?'You’ve cleared every world!':'You can now explore '+worlds[world+1].name+'.'):'Read every pitch independently and score at least 80% in a round to clear this world.')+'</p>':''));
  if(round.teacher)actions(action('New teacher test',teacherSetup),action('Back to adventure',()=>practice(),'secondary'));
  else actions(action('Replay your tune',replaySong,'secondary'),action(cleared&&world<worlds.length-1?'Next world':'Play another round',()=>practice(cleared?Math.min(world+1,worlds.length-1):world)),action('World map',map,'secondary'));
  if(!round.teacher&&dashPool().length>=2)actions(action('Play Firefly Dash',openDash,'dashLaunch'));
  feedback('Round complete.');$('feedback').append(' ',action('See results',complete,'hint'));
 }
 function map(){
- show('World map','<p>Follow Pip’s journey. Choose an open world to play its song.</p>');
+ show('World map','<p>Choose an open world and play your way along its stave.</p>');
  worlds.forEach((w,i)=>{const locked=i>saved.unlocked,b=document.createElement('button');b.disabled=locked;b.className='worldRow'+(i===saved.world?' current':'');
  b.innerHTML='<span class="worldNum">'+String(i+1).padStart(2,'0')+'</span><span><strong>'+w.name+'</strong><small>'+w.clef[0].toUpperCase()+w.clef.slice(1)+' clef · '+w.notes.split(' ').length+' notes</small></span><i>'+icon(locked?'lock':i<saved.unlocked||saved.finished?'check':'flag')+'</i>';b.onclick=()=>practice(i);$('dialogBody').append(b)});
 }
@@ -544,7 +494,7 @@ function teacherSetup(){
 }
 async function connectMidi(){
  const status=$('midiStatus');
- if(!navigator.requestMIDIAccess){status.textContent='MIDI needs a browser with Web MIDI support, such as desktop Chrome or Edge. The on-screen glockenspiel is ready.';return}
+ if(!navigator.requestMIDIAccess){status.textContent='MIDI needs a browser with Web MIDI support, such as desktop Chrome or Edge. The on-screen instrument is ready.';return}
  try{
   midiAccess=await navigator.requestMIDIAccess({sysex:false});
   const bind=()=>{const inputs=[...midiAccess.inputs.values()].filter(i=>i.state==='connected');for(const input of inputs)input.onmidimessage=e=>{const [status,pitch,vel]=e.data;if((status&240)===144&&vel>0)hit(pitch)};if(status.isConnected)status.textContent=inputs.length?'Connected to '+inputs.map(i=>i.name).join(', ')+'.':'Plug in a USB MIDI keyboard. It will connect here.'};
