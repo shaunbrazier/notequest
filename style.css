@@ -117,3 +117,11 @@ dialog .memoryTitle{font:32px/1 var(--display);color:var(--gold)}
  .hero[data-world=teacher]{display:none}
 }
 @media(prefers-reduced-motion:reduce){.instrument.responding{animation:none}#traveller{transition:none}}
+.dashEntry{margin-top:16px;border-top:1px solid var(--border);padding-top:12px}.dashEntry button,.dashLaunch{background:#303d33;color:#e5efb7;border:1px solid #586c4e;border-radius:6px;font-weight:700;padding:8px 13px}.dashEntry button span{color:var(--gold);margin-right:4px}.dashEntry small{display:block;color:var(--dim);font-size:12px;margin-top:5px}
+.dashIntro{display:flex;align-items:center;gap:14px;padding:12px 15px;border-radius:8px;background:linear-gradient(90deg,#15292bf2,#15292bca),url(assets/woods-scene.webp) center/cover}.dashIntro span{color:#ffe393;font-size:42px}.dashIntro p{color:#f1f5e5}
+.dashStatus{display:flex;align-items:center;flex-wrap:wrap;gap:9px;margin-bottom:8px;font-size:14px}.dashStatus span{color:var(--dim)}.dashStatus button{margin-left:auto;min-height:44px}
+.dashTrack{color:#eef3de;background:linear-gradient(0deg,#112728eb,#0d232ee8),url(assets/woods-scene.webp) center/cover;border:1px solid #6e8172;border-radius:8px 8px 0 0;overflow:hidden}.dashTrack svg{display:block;width:100%;height:auto;fill:currentColor}
+.dashTime{height:5px;background:#3a4c4e}.dashTime div{height:100%;transform-origin:left;background:var(--gold)}.jarLights{display:flex;justify-content:space-around;margin:10px 0;color:#4f6066}.jarLights .caught{color:#ffe181;text-shadow:0 0 6px #f5d465}.jarLights .guided{color:#99c5bf}
+#dashMessage{min-height:3em}.dashPiano{height:120px}.dashPiano .black{min-width:19px}
+@media(max-width:480px){.dashStatus{gap:5px;font-size:13px}.dashStatus button{padding:5px 9px}.dashEntry button{min-height:44px}}
+.dashTrack.justCaught .flyGlow{filter:drop-shadow(0 0 4px #ffe887)}
