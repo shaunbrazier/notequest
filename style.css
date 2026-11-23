@@ -166,14 +166,41 @@ aside{display:grid;grid-template-columns:1.6fr 1fr;margin-top:16px;align-items:s
 .instrument{filter:drop-shadow(-1px 0 #314236) drop-shadow(1px 1px #314236)}
 .instrumentInput{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 22px;background:#24342f;border-top:1px solid #3c4d44}
 .instrumentInput strong,.instrumentInput span{display:block}.instrumentInput strong{font-size:15px;color:#e1f0d7}.instrumentInput span{font-size:13px;color:#c5d3c7}.inputActions{display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end}.inputActions button,.dashMicOff{min-height:44px;border:1px solid #70876d;border-radius:6px;background:#304732;color:#dff4c9;padding:6px 10px;font-weight:650;font-size:13px}.instrumentInput[data-state=play] strong:before{content:"● ";color:var(--green)}
-#piano,.dashPiano{display:flex;align-items:flex-start;position:relative;padding:0 2px;height:clamp(135px,17vh,166px);border:4px solid #574433;border-radius:0;background:repeating-linear-gradient(0deg,#332921 0 9%,#71573d 10% 17%,#403328 19% 74%,#795f43 75% 82%,#44372b 84% 100%)}
-.piano .white,.piano .black{border-radius:5px;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
-.piano .white{flex:1;min-width:0;margin:0 1px;top:29%;height:calc(69% - var(--bar-index)*1.7%);padding:0 0 7px;border:1px solid #393c39;border-bottom:4px solid #6c6860;background:linear-gradient(100deg,#fff8 0%,transparent 24%,#2221 80%,#fff5),var(--bar-tone);color:#26312d;justify-content:center}
-.piano .white small{margin:1px 0 0;height:auto;color:#2c3833}.piano .white b{font-size:18px}
-.piano .black{top:2%;height:25%;width:8.6%;min-width:18px;color:#eef3eb;font-size:12px;line-height:1;padding:0;background:linear-gradient(110deg,#536168,#3a454c);border:1px solid #29383c;border-bottom:3px solid #222a2c}
-.piano .white:before,.piano .white:after{content:"";position:absolute;left:50%;transform:translateX(-50%);width:5px;height:5px;border-radius:50%;background:#555b57;box-shadow:inset 0 1px #fff9}
-.piano .white:before{top:8%}.piano .white:after{bottom:7%}
+/* Both layouts use the same chromatic pitches and event handlers. */
+.piano .black b,.piano .black small{display:block;font-size:12px;line-height:1.12}
+.piano .black small{font-size:11px;font-weight:500}
+[data-instrument=piano] .piano .black{color:#edf1f5;padding:5px 0;text-align:center}
+[data-instrument=glockenspiel] :is(#piano,.dashPiano){display:flex;align-items:flex-start;position:relative;padding:0 2px;height:clamp(164px,21vh,208px);border:4px solid #574433;border-radius:0;background:repeating-linear-gradient(0deg,#332921 0 9%,#71573d 10% 17%,#403328 19% 74%,#795f43 75% 82%,#44372b 84% 100%)}
+[data-instrument=glockenspiel] .piano :is(.white,.black){border-radius:5px;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+[data-instrument=glockenspiel] .piano .white{flex:1;min-width:0;margin:0 1px;top:48%;height:calc(51% - var(--bar-index)*.85%);padding:0 0 3px;border:1px solid #393c39;border-bottom:4px solid #6c6860;background:linear-gradient(100deg,#fff8 0%,transparent 24%,#2221 80%,#fff5),var(--bar-tone);color:#26312d;justify-content:center}
+[data-instrument=glockenspiel] .piano .white small{margin:1px 0 0;height:auto;color:#2c3833}
+[data-instrument=glockenspiel] .piano .white b{font-size:18px}
+[data-instrument=glockenspiel] .piano .black{top:2%;height:calc(43% - var(--bar-index)*.65%);width:10.8%;min-width:24px;padding:0;color:#f5f7f4;text-align:center;background:linear-gradient(105deg,#80949b,#495962 25%,#52626b 75%,#77888c);border:1px solid #29383c;border-bottom:4px solid #242f33}
+[data-instrument=glockenspiel] .piano :is(.white,.black):before,[data-instrument=glockenspiel] .piano :is(.white,.black):after{content:"";position:absolute;left:50%;transform:translateX(-50%);width:4px;height:4px;border-radius:50%;background:#555b57;box-shadow:inset 0 1px #fff9}
+[data-instrument=glockenspiel] .piano :is(.white,.black):before{top:6%}
+[data-instrument=glockenspiel] .piano :is(.white,.black):after{bottom:5%}
+[data-instrument=glockenspiel] .piano .black:before,[data-instrument=glockenspiel] .piano .black:after{background:#263438}
 .piano .white.suggest,.piano .black.suggest{box-shadow:inset 0 0 0 4px #f8e57b,0 0 4px #f8e57b}
 .piano .miss{outline:3px solid #bd674e;outline-offset:-4px}.dashPiano .played{outline:3px solid var(--green);outline-offset:-4px}
-@media(max-width:700px){.instrumentInput{padding:6px 10px}.instrumentInput strong{font-size:14px}.inputActions button{padding:4px 8px}#piano,.dashPiano{height:130px}}
-@media(orientation:landscape) and (max-height:530px){.instrumentInput{padding-block:2px}#piano,.dashPiano{height:103px}}
+.instrumentChooser{display:inline-flex;gap:2px;padding:2px;border:1px solid #536b5d;border-radius:7px;background:#17251e;margin-bottom:4px}
+.instrumentChooser button{padding:5px 12px;min-height:34px;border-radius:4px;color:#cbdbce;font-size:14px}
+.instrumentChooser [aria-pressed=true]{background:#b5e894;color:#203322;font-weight:750}
+.scoreControls .clefLabel{pointer-events:auto;display:inline-flex;align-items:center;gap:8px;min-height:36px;font-size:15px;padding:3px 10px;background:#173d31}
+.scoreControls .clefLabel:before{font:26px/1 Bravura;content:"\e050";display:grid;align-items:center;height:26px}
+[data-clef=bass] .scoreControls .clefLabel{background:#492d60;color:#f5ddff;border-color:#bb94ce}
+[data-clef=bass] .clefLabel:before{content:"\e062"}
+.clefPair{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:10px 0}
+.clefCard,.lowerExample{background:#253331;border:1px solid #496556;border-radius:8px;padding:10px}
+.clefCard:nth-child(2),.lowerExample{background:#302c3d;border-color:#65546d}
+.clefCard b,.clefCard span{display:block}.clefCard span{font-size:14px;margin:5px 0}
+.clefCard .guideStaff{height:auto;margin:6px 0}.clefCard button,.lowerExample button{font-size:13px;min-height:42px}
+.lowerExample{display:flex;align-items:center;gap:10px}.lowerExample .guideStaff{width:34%;height:auto;flex:none}
+.lowerExample p{margin:4px 0}.clefPair h3{margin-top:12px}
+@media(max-width:700px){
+ .instrumentInput{padding:6px 10px}.instrumentInput strong{font-size:14px}.inputActions button{padding:4px 8px}
+ .instrumentChooser button{min-height:44px;padding:4px 8px}
+ [data-instrument=glockenspiel] :is(#piano,.dashPiano){height:158px}
+ .scoreControls .clefLabel{min-height:44px}.clefPair{gap:5px}.clefCard{padding:6px}.lowerExample{align-items:start}
+}
+@media(orientation:landscape) and (max-height:530px){.instrumentInput{padding-block:2px}[data-instrument=glockenspiel] :is(#piano,.dashPiano){height:142px}}
+.scoreControls .clefLabel:after{content:"?";font:700 11px/15px var(--body);width:15px;height:15px;border:1px solid currentColor;border-radius:50%;text-align:center}

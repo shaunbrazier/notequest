@@ -33,7 +33,7 @@ const worlds=[
  {name:'Treble Tower',desc:'Climb a whole octave, one note at a time.',clef:'treble',notes:'C4 D4 E4 F4 G4 A4 B4 C5',tip:'G sits on the line that curls through the treble clef.'},
  {name:'Bass Brook',desc:'Find your footing in the bass clef.',clef:'bass',notes:'C3 D3 E3 F3 G3',tip:'The two dots of the bass clef sit on either side of the F line.'},
  {name:'Crystal Cavern',desc:'Explore a full octave in the bass clef.',clef:'bass',notes:'C3 D3 E3 F3 G3 A3 B3 C4',tip:'The top bass-clef line is A. Step into the space above it to find B.'},
- {name:'Chromatic Castle',desc:'Discover the notes between the natural bars.',clef:'treble',notes:'C4 C#4 D4 Eb4 E4 F4 F#4 G4 Ab4 A4 Bb4 B4',tip:'A sharp raises a note by a semitone. A flat lowers it by one key.'}
+ {name:'Chromatic Castle',desc:'Discover the notes between the natural bars.',clef:'treble',notes:'C4 C#4 D4 Eb4 E4 F4 F#4 G4 Ab4 A4 Bb4 B4',tip:'A sharp raises a note by a semitone. A flat lowers it by a semitone.'}
 ];
 const quests=[
  {kind:'meadow',song:'The Bellflower Song',mission:'Pip’s bellflowers are asleep. Play middle C, D and E to open the three flower beds.',start:'Three sleepy flower beds',verbs:['One flower opens','Another petal unfolds'],ending:'The meadow is awake!',reward:'Pip gathers the bellflower seeds for the path into Willow Woods.',voices:[[1,.10],[3,.03],[5,.012]],verses:['C4 D4 E4 E4 D4 C4 D4 C4','E4 D4 C4 D4 E4 E4 D4 C4']},
@@ -68,8 +68,38 @@ function memoryHint(n){
 function guideStaff(clef,n){
  const base=clef==='treble'?30:18,y=79-(n.diatonic-base)*6;
  const lines=Array.from({length:5},(_,i)=>'<path d="M18 '+(79-12*i)+'h238"/>').join('');
- return '<svg class="guideStaff" viewBox="0 0 274 112" aria-label="'+lessonName(n)+' on the '+clef+' staff" role="img"><g stroke="#66776b">'+lines+'</g><text x="33" y="'+(clef==='treble'?67:43)+'" font-family="Bravura" font-size="48">'+(clef==='treble'?'&#xe050;':'&#xe062;')+'</text><ellipse cx="150" cy="'+y+'" rx="8.5" ry="5.6" transform="rotate(-17 150 '+y+')"/><path stroke="currentColor" stroke-width="2" d="M'+(y>55?158:142)+' '+y+'v'+(y>55?-30:30)+'"/></svg>';
+ const position=n.diatonic-base;
+ let ledger='';
+ for(let k=-2;k>=position;k-=2)ledger+='<path d="M135 '+(79-k*6)+'h30"/>';
+ for(let k=10;k<=position;k+=2)ledger+='<path d="M135 '+(79-k*6)+'h30"/>';
+ return '<svg class="guideStaff" viewBox="0 0 274 112" aria-label="'+lessonName(n)+' on the '+clef+' staff" role="img"><g stroke="#66776b">'+lines+ledger+'</g><text x="33" y="'+(clef==='treble'?67:43)+'" font-family="Bravura" font-size="48">'+(clef==='treble'?'&#xe050;':'&#xe062;')+'</text><ellipse cx="150" cy="'+y+'" rx="8.5" ry="5.6" transform="rotate(-17 150 '+y+')"/><path stroke="currentColor" stroke-width="2" d="M'+(y>55?158:142)+' '+y+'v'+(y>55?-30:30)+'"/></svg>';
 }
+function compareClefs(transition=false){
+ if(round.locked&&!round.done)return;
+ const clef=activeClef(),bass=clef==='bass',middle=readNote('C4');
+ const title=transition?'Switch to '+clef+' clef':'Compare the clefs';
+ if(round.teacher){
+  show(transition?title:'Current clef','<p>The next note uses <b>'+clef+' clef</b>. Look for its symbol at the start of the stave.</p>');
+  actions(action('Continue test',()=>$('dialog').close()));return;
+ }
+ if(!transition&&!round.done){round.assisted=true;streak=0;progress()}
+ const card=(c,caption)=>'<div class="clefCard"><b>'+ (c==='treble'?'Treble clef':'Bass clef')+'</b>'+guideStaff(c,middle)+'<span>'+caption+'</span><button class="secondary hearMiddle">Hear middle C</button></div>';
+ const example=!round.teacher&&bass?'<div class="lowerExample">'+guideStaff('bass',readNote('C3'))+'<div><b>The lower C in this world</b><p>Start at the bottom. The second space is C, one octave below middle C.</p><button id="hearLower" class="secondary">Hear the lower C</button></div></div>':'';
+ show(title,'<p>The clef tells you which notes live on the lines and spaces. The bottom line is E in treble clef and G in bass clef.</p><h3>Same sound, same middle C</h3><div class="clefPair">'+card('treble','On the little line below the stave.')+card('bass','On the little line above the stave.')+'</div>'+example);
+ $('dialogBody').querySelectorAll('.hearMiddle').forEach(b=>b.onclick=()=>playTone(60));
+ if($('hearLower'))$('hearLower').onclick=()=>playTone(48);
+ actions(action('Play in '+clef+' clef',()=>$('dialog').close()));
+}
+function announceClef(){
+ const clef=activeClef(),previous=saved.lastClef;
+ $('landscape').dataset.clef=clef;
+ $('clefLabel').setAttribute('aria-label',(clef==='bass'?'Bass':'Treble')+' clef. Compare clefs');
+ if(previous===clef)return;
+ saved.lastClef=clef;save();
+ if(previous||clef==='bass')compareClefs(true);
+}
+$('clefLabel').onclick=()=>compareClefs();
+
 function openGuide(){
  if(round.teacher)return;
  if(!round.done&&!round.locked){round.assisted=true;streak=0;progress()}
@@ -227,7 +257,7 @@ function parseSequence(input){
   return chord;
  });
 }
-const defaults={xp:0,best:0,unlocked:0,world:0,sound:true,history:{},seen:{},songs:{},dashBest:{},dashLearned:{},finished:false};
+const defaults={xp:0,best:0,unlocked:0,world:0,sound:true,history:{},seen:{},songs:{},dashBest:{},dashLearned:{},instrument:'glockenspiel',finished:false};
 let saved;
 try{saved=Object.assign({},defaults,JSON.parse(localStorage.getItem('notequest-v1'))||{})}catch{saved={...defaults}}
 saved.world=Math.min(Math.max(0,Number(saved.world)||0),worlds.length-1);
@@ -237,7 +267,10 @@ for(const [key,independent] of Object.entries(saved.history)){
 }
 function save(){try{localStorage.setItem('notequest-v1',JSON.stringify(saved))}catch{}}
 let round, audio, octave, streak=0, pending=0, renderToken=0, midiAccess, teacherText='C4 D4 E4 G4 E4 D4 C4',teacherClef='treble',teacherLabels=false;
-function playTone(midi,partials=[[1,.19],[2.76,.035],[5.4,.019]],delay=0,decay=1.1){
+function playTone(midi,partials,delay=0,decay){
+ const piano=saved.instrument==='piano';
+ partials??=piano?[[1,.19],[2,.055],[3,.025]]:[[1,.19],[2.76,.035],[5.4,.019]];
+ decay??=piano ? .75 : 1.1;
  if(!saved.sound)return;
  instrumentMic.blockSpeaker(delay+decay);
  try{
@@ -338,7 +371,7 @@ function staff(replayNote){
  $('score').innerHTML=svg+'</svg>';$('clefLabel').textContent=clef==='treble'?'Treble clef':'Bass clef';
 }
 function renderPiano(p,firstOctave,hide,pressed,disabled,play){
- p.innerHTML='';
+ p.innerHTML='';p.setAttribute('aria-label','Playable '+saved.instrument);
  const start=12*(firstOctave+1);
  function key(m,black,i){
   const b=document.createElement('button');b.className=black?'black':'white';b.dataset.pitch=m;b.disabled=m<21||m>108||disabled;
@@ -347,8 +380,13 @@ function renderPiano(p,firstOctave,hide,pressed,disabled,play){
   b.setAttribute('aria-label','Play '+name);
   b.style.setProperty('--bar-index',i);
   b.style.setProperty('--bar-tone',['#eda99a','#eebc83','#ecd585','#a9cc99','#8ecac1','#9dbde0','#b3a8d7','#ddadc8'][i]);
-  if(black){b.style.left=((i+1)*12.5)+'%';if(!hide)b.textContent=letter+'♯'}
-  else b.innerHTML='<b>'+(hide?'':letter)+'</b><small>'+(!hide&&m===60?'middle C':'&nbsp;')+'</small>';
+  if(black){
+   b.style.left=((i+1)*12.5)+'%';
+   const flat=letters[i+1];
+   b.setAttribute('aria-label','Play '+name+' or '+flat+' flat');
+   if(!hide)b.innerHTML='<b>'+letter+'♯</b><small>'+flat+'♭</small>';
+  }
+  else b.innerHTML='<b>'+(hide?'':letter)+'</b><small>'+(!hide&&letter==='C'?(m===60?'middle C':m===48?'lower C':m===72?'upper C':'&nbsp;'):'&nbsp;')+'</small>';
   if(pressed.has(m))b.classList.add('played');
   b.addEventListener('pointerdown',e=>{
    delete b.dataset.directTap;
@@ -398,8 +436,31 @@ function draw(){
  }else if(!round.teacher&&saved.world===0){
   $('tip').textContent='“Start from middle C. Each step from a line to a space moves one natural bar to the right.”';
  }
+ $('prompt').textContent=instrumentWords($('prompt').textContent);
+ $('tip').textContent=instrumentWords($('tip').textContent);
+ announceClef();
 }
-function feedback(text,retry=false){$('feedback').textContent=text;$('feedback').classList.toggle('retry',retry)}
+function feedback(text,retry=false){$('feedback').textContent=instrumentWords(text);$('feedback').classList.toggle('retry',retry)}
+function instrumentWords(text){
+ if(saved.instrument!=='piano')return text;
+ return text.replace(/\bbars\b/g,'keys').replace(/\bbar\b/g,'key').replace(/\bStrike\b/g,'Play').replace(/\bstrike\b/g,'play');
+}
+function styleInstrument(){
+ const isPiano=saved.instrument==='piano';
+ document.documentElement.dataset.instrument=isPiano?'piano':'glockenspiel';
+ $('choosePiano').setAttribute('aria-pressed',isPiano);
+ $('chooseGlock').setAttribute('aria-pressed',!isPiano);
+ $('piano').setAttribute('aria-label','Playable '+saved.instrument);
+}
+function chooseInstrument(value){
+ if(value===saved.instrument)return;
+ saved.instrument=value;save();styleInstrument();
+ if(instrumentMic.session?.phase==='play')instrumentMic.calibrate();
+ else if(!instrumentMic.session)instrumentMic.message(instrumentWords('Tap the bars, or let the iPad listen to yours.'));
+ if(!round.locked&&!round.done)draw();
+}
+$('choosePiano').onclick=()=>chooseInstrument('piano');
+$('chooseGlock').onclick=()=>chooseInstrument('glockenspiel');
 function soundButton(){$('sound').innerHTML=icon(saved.sound?'volume':'mute');$('sound').setAttribute('aria-label',saved.sound?'Mute sound':'Enable sound');$('sound').title=saved.sound?'Mute sound':'Enable sound'}
 $('sound').onclick=()=>{saved.sound=!saved.sound;save();soundButton()};
 function hint(){
@@ -477,7 +538,7 @@ function map(){
  b.innerHTML='<span class="worldNum">'+String(i+1).padStart(2,'0')+'</span><span><strong>'+w.name+'</strong><small>'+w.clef[0].toUpperCase()+w.clef.slice(1)+' clef · '+w.notes.split(' ').length+' notes</small></span><i>'+icon(locked?'lock':i<saved.unlocked||saved.finished?'check':'flag')+'</i>';b.onclick=()=>practice(i);$('dialogBody').append(b)});
 }
 function teacherSetup(){
- show('Teacher mode','<p>Build a test in the order you want it played. The learner gets one attempt at each note or chord.</p><label for="seq">Notes or chords</label><textarea id="seq" spellcheck="false"></textarea><p>Use C4 for middle C, F#4 for a sharp, and Bb3 for a flat. Join chord notes with +, as in C4+E4+G4.</p><label for="selectClef">Clef</label><select id="selectClef"><option value="treble">Treble clef</option><option value="bass">Bass clef</option><option value="auto">Choose by pitch</option></select><label><input id="testLabels" type="checkbox"> Show bar names during the test</label><p role="alert" class="error" id="parseError"></p>');
+ show('Teacher mode','<p>Build a test in the order you want it played. The learner gets one attempt at each note or chord.</p><label for="seq">Notes or chords</label><textarea id="seq" spellcheck="false"></textarea><p>Use C4 for middle C, F#4 for a sharp, and Bb3 for a flat. Join chord notes with +, as in C4+E4+G4.</p><label for="selectClef">Clef</label><select id="selectClef"><option value="treble">Treble clef</option><option value="bass">Bass clef</option><option value="auto">Choose by pitch</option></select><label><input id="testLabels" type="checkbox"> Show note names during the test</label><p role="alert" class="error" id="parseError"></p>');
  $('seq').value=teacherText;$('selectClef').value=teacherClef;$('testLabels').checked=teacherLabels;
  actions(action('Start test',()=>{try{const sequence=parseSequence($('seq').value);teacherText=$('seq').value;teacherClef=$('selectClef').value;teacherLabels=$('testLabels').checked;newRound(true,sequence,teacherClef)}catch(e){$('parseError').textContent=e.message;$('seq').focus()}}),action('How to play',help,'secondary'));
 }
@@ -491,7 +552,7 @@ async function connectMidi(){
  }catch{status.textContent='MIDI access is unavailable. You can still play with the on-screen bars.'}
 }
 function help(){
- show('How to play','<p>Read the note from its place on the five staff lines. Tap a bar on screen or choose Use microphone to play your own glockenspiel.</p><p>Put the iPad near your bars. Strike the C you use for the setup note, then play one bar at a time. Even if your instrument sounds higher than the lesson, the game will follow the octave you matched. Use Match C again to change it.</p><p>The microphone processes sound on this device. Use Stop microphone at any time. For a chord, strike the bars separately.</p><p>Each independent answer earns 10 XP. Use a hint or hear the note whenever you need help, then earn 3 XP by finding it.</p><p>In a teacher test, use the octave buttons to reach higher or lower notes. For a chord, play each pitch once, together or one at a time.</p><p id="midiStatus" role="status"></p>');
+ show('How to play',instrumentWords('<p>Read the note from its place on the five staff lines. Tap a bar on screen or choose Use microphone to play your own instrument.</p><p>Put the iPad near your bars. Strike the C you use for the setup note, then play one bar at a time. Even if your instrument sounds higher than the lesson, the game will follow the octave you matched. Use Match C again to change it.</p><p>The microphone processes sound on this device. Use Stop microphone at any time. For a chord, strike the bars separately.</p><p>Each independent answer earns 10 XP. Use a hint or hear the note whenever you need help, then earn 3 XP by finding it.</p><p>In a teacher test, use the octave buttons to reach higher or lower notes. For a chord, play each pitch once, together or one at a time.</p><p id="midiStatus" role="status"></p>'));
  actions(action('Let’s play',()=>$('dialog').close()),action('Connect MIDI keyboard',connectMidi,'secondary'));
 }
 $('help').onclick=help;$('close').onclick=()=>$('dialog').close();
@@ -582,7 +643,7 @@ function coachFirefly(reason){
  if(dash.phase!=='flying')return;
  cancelAnimationFrame(dash.frame);dash.phase='coaching';dash.chain=0;dash.limit=Math.min(10000,dash.limit+1200);
  const n=dash.deck[dash.index];
- $('dashMessage').textContent=reason+' '+noteHint(n,dash.clef)+' Strike the matching bar when you’re ready.';
+ $('dashMessage').textContent=instrumentWords(reason+' '+noteHint(n,dash.clef)+' Strike the matching bar when you’re ready.');
  $('dashPiano').querySelector('[data-pitch="'+n.midi+'"]').classList.add('suggest');
  $('dashPause').disabled=true;$('dashPause').textContent='Untimed';
 }
@@ -629,4 +690,6 @@ $('openDash').onclick=openDash;
 $('dialog').addEventListener('close',()=>{if(!$('dialog').open)stopDash()});
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&dash?.phase==='flying')toggleDashPause()});
 
+styleInstrument();
+instrumentMic.message(instrumentWords('Tap the bars, or let the iPad listen to yours.'));
 practice();
