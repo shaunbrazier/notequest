@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="en">
-<head><meta charset="utf-8"><meta name="robots" content="noindex, nofollow, noimageindex"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#101722"><title>NoteQuest · Sight-reading adventure</title><link rel="stylesheet" href="style.css?v=mallet-rounds"><script src="listening.js?v=mallet-rounds" defer></script><script src="xylophone.js?v=mallet-rounds" defer></script><script src="game.js?v=mallet-rounds" defer></script></head>
+<head><meta charset="utf-8"><meta name="robots" content="noindex, nofollow, noimageindex"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#101722"><title>NoteQuest · Sight-reading adventure</title><link rel="stylesheet" href="style.css?v=note-signs"><script src="listening.js?v=note-signs" defer></script><script src="xylophone.js?v=note-signs" defer></script><script src="game.js?v=note-signs" defer></script></head>
 <body>
 <header class="topbar"><div class="navwrap">
 <a class="brand" href="#adventure" aria-label="NoteQuest adventure"><span class="brandmark" data-icon="music"></span>Note<span>Quest</span></a>
@@ -18,13 +18,14 @@
 <div class="scoreCloud"><div id="score" role="img" aria-label="Read the displayed note"></div></div>
 
 </div>
+<div class="signCue" id="signCue" role="status" hidden><strong id="signKind"></strong><span id="signRule"></span></div>
 <div class="teacherOctave" id="octaveControls" hidden><button id="octDown" aria-label="Lower keyboard octave">−</button><span id="octaveLabel"></span><button id="octUp" aria-label="Higher keyboard octave">+</button></div>
 <div id="piano" class="piano" aria-label="Playable piano"></div>
 <div id="finishPanel" class="finishPanel" hidden><strong id="finishTitle"></strong><button id="continueRound" class="primary nextRound"></button></div>
 
 </div>
 <div class="cueRail"><div class="cueText"><p id="prompt" class="prompt">Read the note, then strike its bar.</p><div id="feedback" class="feedback" aria-live="polite"></div></div><button class="hint" id="hint"><i data-icon="bulb"></i>Get a hint</button></div>
-<div class="controlsFoot"><button id="fieldGuide" class="fieldGuide"><i data-icon="map"></i> Lines &amp; spaces</button><button id="help" aria-label="How to play"><i data-icon="help"></i></button></div></section>
+<div class="controlsFoot"><button id="fieldGuide" class="fieldGuide"><i data-icon="map"></i> Lines &amp; spaces</button><button id="signGuide" class="fieldGuide">♯ ♭ ♮ &nbsp; Note signs</button><button id="help" aria-label="How to play"><i data-icon="help"></i></button></div></section>
 <aside><section class="panel progressPanel"><div class="sideTitle"><i class="gold" data-icon="trophy"></i><h2>Your progress</h2></div><div class="levelRow"><span id="levelName">Level 1</span><b id="xp">0 XP</b></div><div class="bar"><div id="xpBar"></div></div><p class="small" id="levelGoal"></p><div class="stats"><div><span class="sprite flameSprite" aria-hidden="true"></span><div><strong id="streak">0</strong><small>Streak</small></div></div><div><span class="sprite starSprite" aria-hidden="true"></span><div><strong id="best">0</strong><small>Best streak</small></div></div></div><div class="questRow"><h3>Round progress</h3><span id="roundCount">0 / 8</span></div><div class="segments" id="segments"></div>
 <div id="dashEntry" class="dashEntry"><button id="openDash" disabled><span aria-hidden="true">✦</span> Firefly Dash</button><small id="dashAccess">Finish a round and read two pitches on your own to unlock.</small></div></section>
 <section class="panel guide"><div class="guideHead"><div class="foxFrame"><canvas id="fox" width="24" height="24" aria-hidden="true"></canvas></div><div><small>Your guide</small><h2>Pip the Fox</h2></div></div><p id="tip">“Middle C sits on its own little line just below the staff. Look for it!”</p></section></aside>

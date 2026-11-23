@@ -64,14 +64,14 @@ function memoryHint(n){
  const words=phrase.words.join(clef==='treble'&&place.group===1?'':' ');
  return words+' — '+phrase.words[place.index]+' gives you '+n.l+'.';
 }
-function guideStaff(clef,n){
+function guideStaff(clef,n,sign=n.acc){
  const base=clef==='treble'?30:18,y=79-(n.diatonic-base)*6;
  const lines=Array.from({length:5},(_,i)=>'<path d="M18 '+(79-12*i)+'h238"/>').join('');
  const position=n.diatonic-base;
  let ledger='';
  for(let k=-2;k>=position;k-=2)ledger+='<path d="M135 '+(79-k*6)+'h30"/>';
  for(let k=10;k<=position;k+=2)ledger+='<path d="M135 '+(79-k*6)+'h30"/>';
- return '<svg class="guideStaff" viewBox="0 0 274 112" aria-label="'+lessonName(n)+' on the '+clef+' staff" role="img"><g stroke="#66776b">'+lines+ledger+'</g><text x="33" y="'+(clef==='treble'?67:43)+'" font-family="Bravura" font-size="48">'+(clef==='treble'?'&#xe050;':'&#xe062;')+'</text><ellipse cx="150" cy="'+y+'" rx="8.5" ry="5.6" transform="rotate(-17 150 '+y+')"/><path stroke="currentColor" stroke-width="2" d="M'+(y>55?158:142)+' '+y+'v'+(y>55?-30:30)+'"/></svg>';
+ return '<svg class="guideStaff" viewBox="0 0 274 112" aria-label="'+lessonName(n)+' on the '+clef+' staff" role="img"><g stroke="#66776b">'+lines+ledger+'</g><text x="33" y="'+(clef==='treble'?67:43)+'" font-family="Bravura" font-size="48">'+(clef==='treble'?'&#xe050;':'&#xe062;')+'</text>'+(sign?'<text x="121" y="'+y+'" font-family="Bravura" font-size="48">'+noteSigns[sign].glyph+'</text>':'')+'<ellipse cx="150" cy="'+y+'" rx="8.5" ry="5.6" transform="rotate(-17 150 '+y+')"/><path stroke="currentColor" stroke-width="2" d="M'+(y>55?158:142)+' '+y+'v'+(y>55?-30:30)+'"/></svg>';
 }
 function compareClefs(transition=false){
  if(round.locked&&!round.done)return;
@@ -98,6 +98,56 @@ function announceClef(){
  if(previous||clef==='bass')compareClefs(true);
 }
 $('clefLabel').onclick=()=>compareClefs();
+
+const noteSigns={
+ '#':{name:'Sharp',symbol:'♯',glyph:'&#xe262;',rule:'Move one semitone higher.'},
+ b:{name:'Flat',symbol:'♭',glyph:'&#xe260;',rule:'Move one semitone lower.'},
+ natural:{name:'Natural',symbol:'♮',glyph:'&#xe261;',rule:'Cancel the earlier sharp or flat for this note.'}
+};
+function writtenSign(n,previous){
+ return n.acc||(previous?'natural':'');
+}
+function explainSign(n,sign,previous){
+ if(sign==='natural'){
+  const old=n.l+noteSigns[previous].symbol;
+  return 'Earlier you played '+old+'. The natural brings you back to '+lessonName(n)+'.';
+ }
+ const direction=sign==='#'?'right':'left';
+ return 'Start at '+n.l+'. Play the very next bar to the '+direction+', including the raised bars.';
+}
+const signExamples=[
+ {label:'E♭ → E♮',notes:['Eb4','E4'],signs:['b','natural'],text:'Both notes sit on the E line. The flat lowers E by one semitone. The natural cancels the flat and brings you back to E.'},
+ {label:'C♯ → C♮',notes:['C#4','C4'],signs:['#','natural'],text:'Both notes sit on the middle C line. The sharp raises C by one semitone. The natural cancels the sharp and brings you back to middle C.'},
+ {label:'E♯ = F',notes:['E#4','F4'],signs:['#',''],text:'E and F are neighbours with nothing between them. One semitone above E is F. The two spellings use the same bar.'},
+ {label:'F♭ = E',notes:['Fb4','E4'],signs:['b',''],text:'One semitone below F is E. A flat can land on a natural bar. B and C are neighbours in the same way.'},
+ {label:'C♯ = D♭',notes:['C#4','Db4'],signs:['#','b'],text:'Start at C and go up one semitone, or start at D and go down one. Both names take you to the same bar.'}
+];
+function openSigns(){
+ if(round.teacher||round.locked&&!round.done)return;
+ if(!round.done){round.assisted=true;streak=0;progress()}
+ const first=round.sign?.previous==='#'||current()[0].acc==='#'?1:0;
+ show('Sharps, flats & naturals',instrumentWords('<p>The line or space gives you the letter. The sign tells you what to do with it. One semitone is the smallest step to the next sound.</p><div id="signExamples" class="guideTabs" role="group" aria-label="Choose a note pair"></div><p id="pairReason"></p><div id="signNotes" class="signNotes"></div><div id="signKeyboard" class="piano dashPiano" aria-label="Example instrument"></div><p>Tap either written note to hear it and light its bar. In these tunes, a sign lasts for that letter in that octave until another sign changes it or you reach the next barline.</p>'));
+ function choose(index){
+  const example=signExamples[index];
+  Array.from($('signExamples').children).forEach((b,i)=>b.setAttribute('aria-pressed',i===index));
+  $('pairReason').textContent=instrumentWords(example.text);$('signNotes').replaceChildren();
+  function light(midi){
+   $('signKeyboard').querySelectorAll('[data-pitch]').forEach(key=>key.classList.toggle('suggest',Number(key.dataset.pitch)===midi));
+  }
+  renderPiano($('signKeyboard'),4,false,new Set(),false,midi=>{light(midi);playTone(midi)});
+  example.notes.forEach((text,i)=>{
+   const n=readNote(text),sign=example.signs[i],name=sign?n.l+' '+noteSigns[sign].name.toLowerCase():lessonName(n);
+   const b=action('',()=>{light(n.midi);playTone(n.midi);},'signCard');
+   b.setAttribute('aria-label','Hear '+name);
+   b.innerHTML=guideStaff('treble',n,sign)+'<b>'+name+'</b>';
+   $('signNotes').append(b);
+  });
+  light(readNote(example.notes[0]).midi);
+ }
+ signExamples.forEach((example,i)=>$('signExamples').append(action(example.label,()=>choose(i),'guideOption')));
+ choose(first);actions(action('Back to the tune',()=>$('dialog').close()));
+}
+$('signGuide').onclick=openSigns;
 
 function openGuide(){
  if(round.teacher)return;
@@ -286,8 +336,9 @@ function writtenNotes(notes,headX,base,bottom,step,y,accidentals){
    shift=n.diatonic-prev===1?!shift:false;prev=n.diatonic;
    const x=headX+(shift?(down?-13:13):0);
    svg+='<ellipse class="writtenPitch" cx="'+x+'" cy="'+y(n)+'" rx="9.1" ry="6.3" transform="rotate(-17 '+x+' '+y(n)+')" fill="currentColor"/>';
-   if(n.acc||accidentals.get(n.diatonic)){
-    const glyph=n.acc==='#'?'&#xe262;':n.acc==='b'?'&#xe260;':'&#xe261;';
+   const sign=writtenSign(n,accidentals.get(n.diatonic));
+   if(sign){
+    const glyph=noteSigns[sign].glyph;
     svg+='<text x="'+(headX-29-(accIdx++%3)*12)+'" y="'+y(n)+'" font-family="Bravura" font-size="52" fill="currentColor">'+glyph+'</text>';
    }
    accidentals.set(n.diatonic,n.acc);
@@ -321,10 +372,16 @@ function trailStaff(sequence,index,{accepted=false,travel=false,finished=false}=
  svg+='<text x="13" y="'+(clef==='treble'?bottom-step*2:bottom-step*6)+'" font-family="Bravura" font-size="48" fill="#fff7d9">'+(clef==='treble'?'&#xe050;':'&#xe062;')+'</text>';
  svg+='<g clip-path="url(#'+clipId+')"><g transform="translate('+offset+' 0)">';
  if(animated&&priorOffset!==offset)svg+='<animateTransform attributeName="transform" type="translate" from="'+priorOffset+' 0" to="'+offset+' 0" dur=".26s" fill="freeze"/>';
+ let currentSign=null;
  const accidentals=new Map();
  sequence.forEach((notes,i)=>{
   const x=noteX(i),here=i===index,read=i<index||(here&&accepted);
-  if(here)svg+='<rect class="targetLane" x="'+(x-24)+'" y="9" width="48" height="125" rx="12"/>';
+  if(here){
+   const n=notes[0],previous=accidentals.get(n.diatonic),sign=writtenSign(n,previous);
+   if(sign)currentSign={sign,previous};
+   const left=sign?35:24;
+   svg+='<rect class="targetLane" x="'+(x-left)+'" y="9" width="'+(left+23)+'" height="125" rx="12"/>';
+  }
   svg+='<g class="trailNote '+(read?'read':here?'target':'ahead')+'" data-step="'+i+'">'+writtenNotes(notes,x,base,bottom,step,y,accidentals)+'</g>';
   if(read&&(!here||finished)){
    const dotY=y(notes[0])+19;
@@ -340,6 +397,7 @@ function trailStaff(sequence,index,{accepted=false,travel=false,finished=false}=
  if(accepted&&!finished)svg+='<circle class="noteBloom" cx="'+focus+'" cy="'+y(active)+'" r="14"/>';
  $('score').innerHTML=svg+'</svg>';
  $('score').setAttribute('aria-label',(clef==='treble'?'Treble':'Bass')+' clef. '+(finished?'Tune complete.':'Follow the firefly. Note '+(index+1)+' of '+sequence.length+'.'));
+ return currentSign;
 }
 function staff(travel=false){
  const clefName=activeClef()==='treble'?'Treble clef':'Bass clef';
@@ -348,8 +406,7 @@ function staff(travel=false){
   const encore=current().review;
   const sequence=encore?round.seq.slice(round.score.length):round.score;
   const index=encore?round.index-round.score.length:round.index;
-  trailStaff(sequence,index,{travel:travel&&index>0,accepted:round.locked,finished:round.done});
-  return;
+  return trailStaff(sequence,index,{travel:travel&&index>0,accepted:round.locked,finished:round.done});
  }
  $('score').setAttribute('aria-label','Read the highlighted note or chord in '+clefName);
  const clef=activeClef(),base=clef==='treble'?30:18,spacing=13,step=spacing/2,bottom=89;
@@ -434,10 +491,20 @@ function draw(travel=false){
  $('tip').textContent=round.teacher?'“Take your time. Check the clef, find the note, then play.”':'“'+w.tip+'”';
  $('listen').hidden=round.teacher;$('hint').hidden=round.teacher;
  document.querySelectorAll('nav button').forEach(b=>{const active=b.dataset.view===(round.teacher?'teacher':'adventure');b.classList.toggle('active',active);b.setAttribute('aria-current',active?'page':'false')});
- staff(travel);keyboard();progress();soundButton();
+ round.sign=staff(travel);
+ $('signGuide').hidden=round.teacher;
+ $('signCue').hidden=!round.sign;
+ if(round.sign){
+  const {sign,previous}=round.sign,kind=noteSigns[sign];
+  round.sign.seenKey='sign:'+sign+(sign==='natural'?previous:'');
+  if(!saved.seen[round.sign.seenKey]){round.teaching=true;round.assisted=true}
+  $('signKind').textContent=kind.symbol+'  '+kind.name;
+  $('signRule').textContent=instrumentWords(round.teaching?explainSign(n,sign,previous):kind.rule);
+ }
+ keyboard();progress();soundButton();
  $('fieldGuide').hidden=round.teacher;
  if(round.teaching){
-  const name=lessonName(n);
+  const name=round.sign?.sign==='natural'?n.l+' natural':lessonName(n);
   $('prompt').textContent='Meet '+name+'. Strike the glowing bar to move the firefly.';
   $('tip').textContent='“'+noteHint(n)+' '+memoryHint(n)+'”';
   $('piano').querySelector('[data-pitch="'+n.midi+'"]')?.classList.add('suggest');
@@ -474,7 +541,7 @@ function soundButton(){$('sound').innerHTML=icon(saved.sound?'volume':'mute');$(
 $('sound').onclick=()=>{saved.sound=!saved.sound;save();soundButton()};
 function hint(){
  if(round.done||round.locked||round.teacher)return;round.assisted=true;streak=0;progress();
- const n=current()[0];feedback(noteHint(n)+' '+memoryHint(n),true);
+ const n=current()[0];feedback(noteHint(n)+' '+(round.sign?explainSign(n,round.sign.sign,round.sign.previous):memoryHint(n)),true);
  $('piano').querySelector('[data-pitch="'+n.midi+'"]')?.classList.add('suggest');
 }
 $('hint').onclick=hint;$('listen').onclick=()=>{if(!round.done&&!round.locked){if(!saved.sound){feedback('Sound is muted. Use the speaker button to listen.',true);return}round.assisted=true;streak=0;progress();current().forEach(n=>playTone(n.midi));feedback('Listen, then find the bar.',true)}};
@@ -497,10 +564,10 @@ function hit(m,fromMicrophone=false){
  finishNote(!round.assisted);
 }
 function finishNote(independent){
- round.locked=true;const names=current().map(lessonName).join(' + ');round.results.push({names,independent,lesson:round.teaching,review:!!current().review});
+ round.locked=true;const names=round.sign?.sign==='natural'?current()[0].l+' natural':current().map(lessonName).join(' + ');round.results.push({names,independent,lesson:round.teaching,review:!!current().review});
  if(independent){round.correct++;streak++;saved.best=Math.max(saved.best,streak)}
  else streak=0;
- if(!round.teacher){saved.xp+=independent?10:3;const pitch=current()[0].name;saved.seen[activeClef()+':'+pitch]=true;if(!round.teaching)saved.history[saved.world+':'+pitch]=independent;if(independent)saved.dashLearned[saved.world+':'+pitch]=true}
+ if(!round.teacher){if(round.sign)saved.seen[round.sign.seenKey]=true;saved.xp+=independent?10:3;const pitch=current()[0].name;saved.seen[activeClef()+':'+pitch]=true;if(!round.teaching)saved.history[saved.world+':'+pitch]=independent;if(independent)saved.dashLearned[saved.world+':'+pitch]=true}
  save();progress();
  if(!round.teacher)staff();
  feedback(round.teacher?'Answer recorded.':names+' · '+(independent?'+10 XP':'+3 XP'));
@@ -535,7 +602,7 @@ function complete(){
  $('finishTitle').textContent=round.teacher?'Test complete!':'Tune complete!';
  $('continueRound').textContent=label;
  $('piano').hidden=true;$('octaveControls').hidden=true;$('finishPanel').hidden=false;
- $('hint').hidden=true;$('listen').hidden=true;
+ $('hint').hidden=true;$('listen').hidden=true;$('signCue').hidden=true;
  firstResultAction(label,nextRound);
  if(round.teacher)actions(action('New teacher test',teacherSetup,'secondary'),action('Back to adventure',()=>practice(),'secondary'));
  else actions(action('Replay your tune',replaySong,'secondary'),action('World map',map,'secondary'));
